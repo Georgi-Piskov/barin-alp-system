@@ -1,0 +1,267 @@
+ALWAYS CHECK THESE INSTRUCTIONS BEFORE WORKING ON HUMANMAP.
+
+✅ SYSTEM INSTRUCTIONS – HUMANMAP PROJECT (for VS Code AI assistants)
+
+Purpose:
+These system instructions describe the concept, scope, architecture and constraints of the HumanMap project.
+AI assistants should use this document as a reference when generating code, explanations, files, workflows or project structure.
+
+1. Project Overview
+
+HumanMap is a web-based application (PWA-friendly) designed to show positive human stories pinned to real locations on a map.
+The purpose is to let people experience uplifting moments shared by others who have been at the same place.
+
+Users can:
+
+Allow the application to access their current location.
+
+View a map with “emotion bubbles” pinned at coordinates.
+
+Tap a bubble to read a short, anonymous story connected to that location.
+
+Submit their own story anonymously at their current position.
+
+The application focuses primarily on positive, heartwarming and wholesome stories.
+Sad or negative stories may exist, but priority is on positive emotions.
+
+2. What the Application Must Do
+Frontend (Web App / PWA)
+
+Display a map
+
+Use Leaflet.js + OpenStreetMap tiles.
+
+Show the user's current position.
+
+Show story markers (icons depending on emotion).
+
+Track user location (while app is open)
+
+Use browser Geolocation API (watchPosition).
+
+The app does NOT require background tracking outside active usage.
+
+When the location changes, check for nearby stories and update markers.
+
+Story bubbles / markers
+
+Icons representing emotions: happy, nostalgic, funny, romantic, etc.
+
+Clicking a bubble opens a popup with:
+
+Story text
+
+Optional emotion tag
+
+Timestamp (optional)
+
+Submit story form
+
+Anonymous submission.
+
+Required: text (max 500–700 characters)
+
+Optional: emotion tag
+
+Save current coordinates automatically.
+
+Smooth, minimal UI
+
+Mobile-first design.
+
+Single main screen + modal for adding a story.
+
+Backend (n8n)
+
+Backend is implemented entirely in n8n using:
+
+Webhook nodes
+
+Database nodes (Supabase or Google Sheets)
+
+Optional filtering/moderation logic
+
+Endpoints needed:
+
+POST /humanmap-new-story
+
+Inputs: { lat, lng, text, emotion }
+
+Validate input
+
+Filter toxic/abusive content
+
+Store as pending or approved
+
+Return { ok: true }
+
+GET /humanmap-get-stories
+
+Inputs: lat, lng, radius
+
+Return stories that match:
+
+status = "approved"
+
+within radius (simple bounding box or distance formula)
+
+Moderation workflow
+
+Pending stories go into Google Sheet / Supabase
+
+Manual or semi-automatic approval
+
+Optional: automatic word-filter for profanity
+
+3. Data Model
+
+Each story record should include:
+
+id: UUID
+
+lat: float
+
+lng: float
+
+text: string
+
+emotion: string (“happy”, “funny”, “romantic”, etc.)
+
+created_at: timestamp
+
+status: “pending”, “approved”, or “rejected”
+
+4. Design and UX Principles
+
+Minimalistic and warm visual style
+
+Mobile-first; must work smoothly on phones
+
+No user accounts, no login
+
+Instant feedback on submission
+
+Stories appear instantly on the map (locally), even if pending in backend
+
+Primary emotion is positive
+
+Avoid clutter — clean map, simple icons, intuitive use
+
+5. Security / Privacy Rules
+
+All stories must be anonymous.
+
+Do not request or store personal information.
+
+Do not store IP addresses unless strictly necessary.
+
+Ensure stories do NOT contain:
+
+Hate speech
+
+Personal data of third parties
+
+Links
+
+Spam or ads
+
+Location access must be explicitly granted by user.
+
+No background geolocation outside active browser tab.
+
+6. Technology Stack
+Frontend:
+
+HTML, CSS, JavaScript
+
+Leaflet.js
+
+OpenStreetMap tiles
+
+Optional small JS framework (but not required)
+
+PWA manifest + service worker (optional)
+
+Backend:
+
+n8n (self-hosted)
+
+Webhooks as API
+
+Database:
+
+Supabase (recommended), or
+
+Google Sheets (MVP), or
+
+Local/Postgres if needed
+
+Hosting:
+
+Frontend → GitHub Pages or Netlify (free)
+
+Backend → existing n8n server
+
+7. AI Assistant Guidelines
+
+When generating code or explanations, AI assistants must:
+
+Follow the project goal: map of positive human stories
+
+Prioritize simplicity and maintainability
+
+Prefer lightweight solutions
+
+Maintain privacy and anonymity
+
+Avoid unnecessary libraries or complexity
+
+Respect mobile-first design
+
+Use Leaflet.js for maps
+
+Use n8n webhooks for backend logic
+
+Use clear and modular file structure
+
+AI should not propose:
+
+Background geolocation tracking
+
+Heavy server architectures
+
+Authentication flows
+
+Paid APIs (unless explicitly requested)
+
+8. Feature Roadmap (Future, not for MVP)
+
+Push notifications (requires PWA + server push)
+
+Native mobile app (React Native / Flutter)
+
+Advanced geospatial indexing
+
+Story clustering + heatmap
+
+AI-assisted moderation (optional)
+
+Multi-language support
+
+User reactions (❤️, 😂, 🌟)
+
+Text-to-speech for stories
+
+9. What “success” looks like
+
+Users can walk somewhere → see positive stories nearby
+
+Can add their own story effortlessly
+
+System stays anonymous and simple
+
+Stories create emotional connection to places
+
+The app feels calming, kind, and meaningful
+
+🔚 End of System Instructions
