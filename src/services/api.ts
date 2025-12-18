@@ -216,9 +216,22 @@ export const apiService = {
       const response = await api.get(buildApiUrl(API_CONFIG.ENDPOINTS.GET_INVOICES), {
         params: { objectId },
       });
-      return { success: true, data: response.data };
+      
+      console.log('Get Invoices response from n8n:', response.data);
+      
+      // n8n returns { data: [...] } format
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        return { success: true, data: response.data.data };
+      }
+      
+      if (Array.isArray(response.data)) {
+        return { success: true, data: response.data };
+      }
+      
+      return { success: true, data: [] };
     } catch (error) {
-      return { success: false, error: 'Грешка при зареждане на фактури' };
+      console.error('Get Invoices error:', error);
+      return { success: false, error: 'Грешка при зареждане на фактури', data: [] };
     }
   },
 
@@ -233,9 +246,57 @@ export const apiService = {
         buildApiUrl(API_CONFIG.ENDPOINTS.CREATE_INVOICE),
         invoice
       );
+      
+      console.log('Create Invoice response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('Create Invoice error:', error);
       return { success: false, error: 'Грешка при създаване на фактура' };
+    }
+  },
+
+  async updateInvoice(id: number, updates: Partial<Invoice>): Promise<ApiResponse<Invoice>> {
+    if (DEMO_MODE) {
+      return { success: false, error: 'Demo mode' };
+    }
+
+    try {
+      const response = await api.put(
+        buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_INVOICE),
+        { id, ...updates }
+      );
+      
+      console.log('Update Invoice response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Update Invoice error:', error);
+      return { success: false, error: 'Грешка при обновяване на фактура' };
+    }
+  },
+
+  async deleteInvoice(id: number): Promise<ApiResponse<void>> {
+    if (DEMO_MODE) {
+      return { success: true };
+    }
+
+    try {
+      await api.delete(buildApiUrl(API_CONFIG.ENDPOINTS.DELETE_INVOICE), {
+        data: { id },
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Delete Invoice error:', error);
+      return { success: false, error: 'Грешка при изтриване на фактура' };
     }
   },
 
