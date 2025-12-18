@@ -1,0 +1,183 @@
+{
+  "name": "BARIN-ALP: Create Inventory Item",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/inventory/create",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-create-inventory",
+      "name": "Webhook Create",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-inventory-create"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inventory",
+          "mode": "list",
+          "cachedResultName": "Inventory"
+        },
+        "options": {}
+      },
+      "id": "sheets-read-for-id",
+      "name": "Read for Next ID",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const existingItems = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Calculate next ID\nlet maxId = 0;\nexistingItems.forEach(item => {\n  const id = Number(item.json.id);\n  if (id > maxId) maxId = id;\n});\nconst newId = maxId + 1;\n\n// Serialize photos to JSON string for Google Sheets\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{\n  json: {\n    id: newId,\n    name: body.name,\n    category: body.category || 'Други',\n    status: body.status || 'available',\n    assignedTo: body.assignedTo || '',\n    assignedToName: body.assignedToName || '',\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    photos: photosJson\n  }\n}];"
+      },
+      "id": "code-prepare-item",
+      "name": "Prepare Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inventory",
+          "mode": "list",
+          "cachedResultName": "Inventory"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "name": "={{ $json.name }}",
+            "category": "={{ $json.category }}",
+            "status": "={{ $json.status }}",
+            "assignedTo": "={{ $json.assignedTo }}",
+            "assignedToName": "={{ $json.assignedToName }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "photos": "={{ $json.photos }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-append-item",
+      "name": "Append to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [910, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $('Prepare Item').first().json;\nconst body = $('Webhook Create').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: item.id,\n      name: item.name,\n      category: item.category,\n      status: item.status,\n      assignedTo: body.assignedTo || null,\n      assignedToName: body.assignedToName || null,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null,\n      photos: body.photos || []\n    }\n  }\n}];"
+      },
+      "id": "code-format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-create",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Create": {
+      "main": [
+        [
+          {
+            "node": "Read for Next ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read for Next ID": {
+      "main": [
+        [
+          {
+            "node": "Prepare Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Item": {
+      "main": [
+        [
+          {
+            "node": "Append to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

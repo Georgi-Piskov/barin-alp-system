@@ -1,0 +1,109 @@
+{
+  "name": "BARIN-ALP: Get Inventory",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "barin-alp/inventory",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-get-inventory",
+      "name": "Webhook Get Inventory",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-inventory-get"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inventory",
+          "mode": "list",
+          "cachedResultName": "Inventory"
+        },
+        "options": {}
+      },
+      "id": "sheets-read-inventory",
+      "name": "Read Inventory",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\nconst items = rows.map(row => {\n  // Parse photos from JSON string\n  let photos = [];\n  if (row.json.photos) {\n    try {\n      photos = JSON.parse(row.json.photos);\n    } catch (e) {\n      // If not JSON, treat as comma-separated URLs\n      photos = row.json.photos.split(',').map(p => p.trim()).filter(p => p);\n    }\n  }\n  \n  return {\n    id: Number(row.json.id),\n    name: row.json.name || '',\n    category: row.json.category || 'Други',\n    status: row.json.status || 'available',\n    assignedTo: row.json.assignedTo ? Number(row.json.assignedTo) : null,\n    assignedToName: row.json.assignedToName || null,\n    objectId: row.json.objectId ? Number(row.json.objectId) : null,\n    objectName: row.json.objectName || null,\n    photos: photos\n  };\n});\n\nreturn [{ json: { data: items } }];"
+      },
+      "id": "code-format-inventory",
+      "name": "Format Inventory",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-inventory",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Get Inventory": {
+      "main": [
+        [
+          {
+            "node": "Read Inventory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Inventory": {
+      "main": [
+        [
+          {
+            "node": "Format Inventory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Inventory": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

@@ -41,13 +41,13 @@
 |--------|------|---------|
 | id | Number | 1 |
 | name | Text | Бормашина Bosch |
-| category | Text | Инструменти |
-| status | Text | available / in-use / maintenance |
+| category | Text | Инструменти / Машини / Скелета / Защитни средства / Електроматериали / ВиК материали / Други |
+| status | Text | available / in-use / maintenance / lost |
 | assignedTo | Number | 3 (user ID) |
 | assignedToName | Text | Петър Техник |
 | objectId | Number | 1 (object ID) |
 | objectName | Text | бул. Витошка 10 |
-| photos | Text | URL1,URL2 |
+| photos | Text | JSON array - ["data:image/jpeg;base64,..."] or comma-separated URLs |
 
 ### 5. Transactions Sheet
 | Column | Type | Example |

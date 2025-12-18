@@ -1,0 +1,146 @@
+{
+  "name": "BARIN-ALP: Update Inventory Item",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "barin-alp/inventory/update",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-update-inventory",
+      "name": "Webhook Update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-inventory-update"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook Update').first().json.body;\n\n// Serialize photos to JSON string\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{\n  json: {\n    id: body.id,\n    name: body.name,\n    category: body.category || 'Други',\n    status: body.status || 'available',\n    assignedTo: body.assignedTo || '',\n    assignedToName: body.assignedToName || '',\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    photos: photosJson\n  }\n}];"
+      },
+      "id": "code-prepare-update",
+      "name": "Prepare Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inventory",
+          "mode": "list",
+          "cachedResultName": "Inventory"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "name": "={{ $json.name }}",
+            "category": "={{ $json.category }}",
+            "status": "={{ $json.status }}",
+            "assignedTo": "={{ $json.assignedTo }}",
+            "assignedToName": "={{ $json.assignedToName }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "photos": "={{ $json.photos }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "sheets-update-item",
+      "name": "Update in Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [690, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook Update').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: body.id,\n      name: body.name,\n      category: body.category,\n      status: body.status,\n      assignedTo: body.assignedTo || null,\n      assignedToName: body.assignedToName || null,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null,\n      photos: body.photos || []\n    }\n  }\n}];"
+      },
+      "id": "code-format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-update",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1130, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Update": {
+      "main": [
+        [
+          {
+            "node": "Prepare Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update": {
+      "main": [
+        [
+          {
+            "node": "Update in Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update in Sheet": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}
