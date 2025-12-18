@@ -57,12 +57,34 @@ export const apiService = {
         username,
         pin,
       });
-      return { success: true, data: response.data };
+      
+      console.log('Login response from n8n:', response.data);
+      
+      // n8n returns { success: true, data: {...} } or { success: false, error: '...' }
+      if (response.data?.success && response.data?.data) {
+        const userData = response.data.data;
+        // Ensure role is correctly mapped
+        if (userData.role) {
+          userData.role = userData.role.toLowerCase();
+        }
+        return { success: true, data: userData };
+      } else if (response.data?.success === false) {
+        return { success: false, error: response.data.error || 'Грешно потребителско име или ПИН' };
+      }
+      
+      // Fallback: handle different response formats
+      const userData = response.data?.user || response.data;
+      if (userData && userData.role) {
+        userData.role = userData.role.toLowerCase();
+      }
+      
+      return { success: true, data: userData };
     } catch (error: unknown) {
+      console.error('Login error:', error);
       if (axios.isAxiosError(error)) {
         return { 
           success: false, 
-          error: error.response?.data?.message || 'Грешка при вход' 
+          error: error.response?.data?.message || error.response?.data?.error || 'Грешка при вход' 
         };
       }
       return { success: false, error: 'Грешка при свързване' };
@@ -86,8 +108,15 @@ export const apiService = {
       const response = await api.get(buildApiUrl(API_CONFIG.ENDPOINTS.GET_OBJECTS), {
         params: { userId, role },
       });
-      return { success: true, data: response.data };
+      
+      console.log('Get Objects response from n8n:', response.data);
+      
+      // Handle array or object with data property
+      const objectsData = Array.isArray(response.data) ? response.data : response.data?.objects || response.data?.data || [];
+      
+      return { success: true, data: objectsData };
     } catch (error) {
+      console.error('Get Objects error:', error);
       return { success: false, error: 'Грешка при зареждане на обекти' };
     }
   },
