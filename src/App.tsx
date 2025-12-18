@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { ObjectsPage } from './pages/Objects';
@@ -10,7 +10,7 @@ import { ProtectedRoute } from './components/Auth';
 
 function App() {
   return (
-    <BrowserRouter basename="/barin-alp-system">
+    <HashRouter>
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -35,7 +35,7 @@ function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

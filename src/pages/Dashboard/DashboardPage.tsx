@@ -4,7 +4,6 @@ import { apiService } from '../../services/api';
 import { ConstructionObject } from '../../types';
 import { 
   Building2, 
-  TrendingUp, 
   TrendingDown, 
   AlertTriangle,
   Package,
