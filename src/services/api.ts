@@ -111,10 +111,17 @@ export const apiService = {
       
       console.log('Get Objects response from n8n:', response.data);
       
-      // Handle array or object with data property
-      const objectsData = Array.isArray(response.data) ? response.data : response.data?.objects || response.data?.data || [];
+      // n8n returns { data: [...] } format
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        return { success: true, data: response.data.data };
+      }
       
-      return { success: true, data: objectsData };
+      // Handle array response
+      if (Array.isArray(response.data)) {
+        return { success: true, data: response.data };
+      }
+      
+      return { success: true, data: [] };
     } catch (error) {
       console.error('Get Objects error:', error);
       return { success: false, error: 'Грешка при зареждане на обекти' };
@@ -309,8 +316,8 @@ export const apiService = {
       
       console.log('Get Users response from n8n:', response.data);
       
-      // n8n returns { success: true, data: [...] } or array directly
-      if (response.data?.success && response.data?.data) {
+      // n8n returns { data: [...] } format
+      if (response.data?.data && Array.isArray(response.data.data)) {
         return { success: true, data: response.data.data };
       }
       
