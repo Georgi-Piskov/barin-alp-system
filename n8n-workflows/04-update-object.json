@@ -1,0 +1,121 @@
+{
+  "name": "BARIN-ALP: Update Object",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "barin-alp/objects/update",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-update-object",
+      "name": "Webhook Update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-objects-update"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "OBJECTS",
+          "mode": "list",
+          "cachedResultName": "OBJECTS"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.body.id }}",
+            "NAME": "={{ $json.body.name }}",
+            "ADDRESS": "={{ $json.body.address }}",
+            "STATUS": "={{ $json.body.status }}",
+            "totalExpenses": "={{ $json.body.totalExpenses }}",
+            "assignedTechnicians": "={{ $json.body.assignedTechnicians ? $json.body.assignedTechnicians.join(',') : '' }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "sheets-update-object",
+      "name": "Update Sheet Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook Update').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: body.id,\n      name: body.name,\n      address: body.address,\n      status: body.status,\n      totalExpenses: body.totalExpenses || 0,\n      assignedTechnicians: body.assignedTechnicians || []\n    }\n  }\n}];"
+      },
+      "id": "code-format-update-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-update",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Update": {
+      "main": [
+        [
+          {
+            "node": "Update Sheet Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sheet Row": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

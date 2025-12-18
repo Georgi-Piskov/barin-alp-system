@@ -1,0 +1,108 @@
+{
+  "name": "BARIN-ALP: Get Objects",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "barin-alp/objects",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-get-objects",
+      "name": "Webhook Get Objects",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-objects-get"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "OBJECTS",
+          "mode": "list",
+          "cachedResultName": "OBJECTS"
+        },
+        "options": {}
+      },
+      "id": "sheets-read-objects",
+      "name": "Read Objects",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const objects = $input.all();\n\nconst formattedObjects = objects.map(obj => ({\n  id: Number(obj.json.ID),\n  name: obj.json.NAME,\n  address: obj.json.ADDRESS,\n  status: obj.json.STATUS || 'active',\n  totalExpenses: Number(obj.json.totalExpenses) || 0,\n  assignedTechnicians: obj.json.assignedTechnicians ? \n    obj.json.assignedTechnicians.split(',').map(Number) : []\n}));\n\nreturn [{ json: formattedObjects }];"
+      },
+      "id": "code-format-objects",
+      "name": "Format Objects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-objects",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Get Objects": {
+      "main": [
+        [
+          {
+            "node": "Read Objects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Objects": {
+      "main": [
+        [
+          {
+            "node": "Format Objects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Objects": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

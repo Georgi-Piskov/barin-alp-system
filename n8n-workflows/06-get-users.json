@@ -1,0 +1,108 @@
+{
+  "name": "BARIN-ALP: Get Users",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "barin-alp/users",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-get-users",
+      "name": "Webhook Get Users",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-users-get"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Users",
+          "mode": "list",
+          "cachedResultName": "Users"
+        },
+        "options": {}
+      },
+      "id": "sheets-read-users",
+      "name": "Read Users",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $input.all();\n\nconst formattedUsers = users.map(user => ({\n  id: Number(user.json.id),\n  username: user.json.username,\n  name: user.json.name,\n  role: user.json.role,\n  pin: String(user.json.pin)\n}));\n\nreturn [{ json: formattedUsers }];"
+      },
+      "id": "code-format-users",
+      "name": "Format Users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-users",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Get Users": {
+      "main": [
+        [
+          {
+            "node": "Read Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Users": {
+      "main": [
+        [
+          {
+            "node": "Format Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Users": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

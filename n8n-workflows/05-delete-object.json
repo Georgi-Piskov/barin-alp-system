@@ -1,0 +1,116 @@
+{
+  "name": "BARIN-ALP: Delete Object",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "barin-alp/objects/delete",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-delete-object",
+      "name": "Webhook Delete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-objects-delete"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "OBJECTS",
+          "mode": "list",
+          "cachedResultName": "OBJECTS"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ID",
+              "lookupValue": "={{ $json.body.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-delete-object",
+      "name": "Delete from Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true\n  }\n}];"
+      },
+      "id": "code-format-delete-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-delete",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Delete": {
+      "main": [
+        [
+          {
+            "node": "Delete from Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete from Sheet": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

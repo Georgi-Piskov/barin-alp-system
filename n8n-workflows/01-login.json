@@ -1,0 +1,108 @@
+{
+  "name": "BARIN-ALP: Login",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/login",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-login",
+      "name": "Webhook Login",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-login"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Users",
+          "mode": "list",
+          "cachedResultName": "Users"
+        },
+        "options": {}
+      },
+      "id": "sheets-read-users",
+      "name": "Read Users",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $input.all();\nconst body = $('Webhook Login').first().json.body;\nconst { username, pin } = body;\n\nconst user = users.find(u => \n  u.json.username === username && \n  String(u.json.pin) === String(pin)\n);\n\nif (user) {\n  return [{\n    json: {\n      success: true,\n      data: {\n        id: user.json.id,\n        username: user.json.username,\n        name: user.json.name,\n        role: user.json.role,\n        pin: user.json.pin\n      }\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: 'Грешно потребителско име или ПИН'\n    }\n  }];\n}"
+      },
+      "id": "code-check-login",
+      "name": "Check Credentials",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-login",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Login": {
+      "main": [
+        [
+          {
+            "node": "Read Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Users": {
+      "main": [
+        [
+          {
+            "node": "Check Credentials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Credentials": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

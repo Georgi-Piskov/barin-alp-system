@@ -1,0 +1,179 @@
+{
+  "name": "BARIN-ALP: Create Object",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/objects/create",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-create-object",
+      "name": "Webhook Create",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-objects-create"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "OBJECTS",
+          "mode": "list",
+          "cachedResultName": "OBJECTS"
+        },
+        "options": {}
+      },
+      "id": "sheets-read-for-id",
+      "name": "Read for Next ID",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [470, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const existingObjects = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Calculate next ID\nlet maxId = 0;\nexistingObjects.forEach(obj => {\n  const id = Number(obj.json.ID);\n  if (id > maxId) maxId = id;\n});\nconst newId = maxId + 1;\n\nreturn [{\n  json: {\n    ID: newId,\n    NAME: body.name,\n    ADDRESS: body.address,\n    STATUS: body.status || 'active',\n    totalExpenses: body.totalExpenses || 0,\n    assignedTechnicians: body.assignedTechnicians ? body.assignedTechnicians.join(',') : ''\n  }\n}];"
+      },
+      "id": "code-prepare-object",
+      "name": "Prepare Object",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "OBJECTS",
+          "mode": "list",
+          "cachedResultName": "OBJECTS"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "NAME": "={{ $json.NAME }}",
+            "ADDRESS": "={{ $json.ADDRESS }}",
+            "STATUS": "={{ $json.STATUS }}",
+            "totalExpenses": "={{ $json.totalExpenses }}",
+            "assignedTechnicians": "={{ $json.assignedTechnicians }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-append-object",
+      "name": "Append to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [910, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const obj = $('Prepare Object').first().json;\nconst body = $('Webhook Create').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: obj.ID,\n      name: obj.NAME,\n      address: obj.ADDRESS,\n      status: obj.STATUS,\n      totalExpenses: obj.totalExpenses,\n      assignedTechnicians: body.assignedTechnicians || []\n    }\n  }\n}];"
+      },
+      "id": "code-format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-create",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Create": {
+      "main": [
+        [
+          {
+            "node": "Read for Next ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read for Next ID": {
+      "main": [
+        [
+          {
+            "node": "Prepare Object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Object": {
+      "main": [
+        [
+          {
+            "node": "Append to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

@@ -3,8 +3,7 @@
 
 export const API_CONFIG = {
   // Base URL for your n8n instance
-  // Example: https://your-n8n-instance.com/webhook
-  BASE_URL: import.meta.env.VITE_N8N_BASE_URL || 'https://your-n8n-instance.com/webhook',
+  BASE_URL: import.meta.env.VITE_N8N_BASE_URL || 'https://n8n.simeontsvetanovn8nworkflows.site/webhook',
   
   // Google Sheets ID
   SPREADSHEET_ID: '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo',
