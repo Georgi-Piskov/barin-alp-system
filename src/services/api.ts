@@ -133,8 +133,18 @@ export const apiService = {
         buildApiUrl(API_CONFIG.ENDPOINTS.CREATE_OBJECT),
         object
       );
+      
+      console.log('Create Object response from n8n:', response.data);
+      
+      // n8n returns { success: true, data: {...} }
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      // Fallback for direct object response
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('Create Object error:', error);
       return { success: false, error: 'Грешка при създаване на обект' };
     }
   },
@@ -154,8 +164,17 @@ export const apiService = {
         buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_OBJECT),
         { id, ...updates }
       );
+      
+      console.log('Update Object response from n8n:', response.data);
+      
+      // n8n returns { success: true, data: {...} }
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('Update Object error:', error);
       return { success: false, error: 'Грешка при обновяване на обект' };
     }
   },
@@ -287,9 +306,23 @@ export const apiService = {
 
     try {
       const response = await api.get(buildApiUrl(API_CONFIG.ENDPOINTS.GET_USERS));
-      return { success: true, data: response.data };
+      
+      console.log('Get Users response from n8n:', response.data);
+      
+      // n8n returns { success: true, data: [...] } or array directly
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      // Handle array response
+      if (Array.isArray(response.data)) {
+        return { success: true, data: response.data };
+      }
+      
+      return { success: true, data: [] };
     } catch (error) {
-      return { success: false, error: 'Грешка при зареждане на потребители' };
+      console.error('Get Users error:', error);
+      return { success: false, error: 'Грешка при зареждане на потребители', data: [] };
     }
   },
 };

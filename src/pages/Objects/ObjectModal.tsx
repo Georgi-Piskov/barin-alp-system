@@ -36,9 +36,17 @@ export const ObjectModal = ({ object, onSave, onClose }: ObjectModalProps) => {
 
   const loadTechnicians = async () => {
     setIsLoadingTechnicians(true);
-    const response = await apiService.getUsers();
-    if (response.success && response.data) {
-      setTechnicians(response.data.filter(u => u.role === 'technician'));
+    try {
+      const response = await apiService.getUsers();
+      if (response.success && response.data) {
+        const techs = response.data.filter(u => u.role === 'technician');
+        setTechnicians(techs);
+      } else {
+        setTechnicians([]);
+      }
+    } catch (error) {
+      console.error('Error loading technicians:', error);
+      setTechnicians([]);
     }
     setIsLoadingTechnicians(false);
   };
