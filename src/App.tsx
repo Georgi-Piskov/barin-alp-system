@@ -10,7 +10,7 @@ import { ProtectedRoute } from './components/Auth';
 
 function App() {
   return (
-    <BrowserRouter basename="/BARIN-ALP-System">
+    <BrowserRouter basename="/barin-alp-system">
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
