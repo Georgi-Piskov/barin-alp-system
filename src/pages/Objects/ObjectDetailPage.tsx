@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { ConstructionObject, User } from '../../types';
+import { ConstructionObject, User, Invoice, InventoryItem } from '../../types';
 import { 
   ArrowLeft, 
   Building2, 
@@ -13,7 +13,12 @@ import {
   FileText,
   Package,
   Receipt,
-  TrendingDown
+  TrendingDown,
+  Calendar,
+  Wrench,
+  CheckCircle,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { ObjectModal } from './ObjectModal';
 
@@ -31,29 +36,46 @@ export const ObjectDetailPage = () => {
 
   const [object, setObject] = useState<ConstructionObject | null>(null);
   const [technicians, setTechnicians] = useState<User[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    loadObject();
-    loadTechnicians();
+    loadData();
   }, [id]);
 
-  const loadObject = async () => {
+  const loadData = async () => {
     setIsLoading(true);
-    const response = await apiService.getObjects(user?.id, user?.role);
-    if (response.success && response.data) {
-      const found = response.data.find(obj => obj.id === Number(id));
+    
+    // Load all data in parallel
+    const [objectsRes, usersRes, invoicesRes, inventoryRes] = await Promise.all([
+      apiService.getObjects(user?.id, user?.role),
+      apiService.getUsers(),
+      apiService.getInvoices(),
+      apiService.getInventory(),
+    ]);
+    
+    if (objectsRes.success && objectsRes.data) {
+      const found = objectsRes.data.find(obj => obj.id === Number(id));
       setObject(found || null);
     }
-    setIsLoading(false);
-  };
-
-  const loadTechnicians = async () => {
-    const response = await apiService.getUsers();
-    if (response.success && response.data) {
-      setTechnicians(response.data.filter(u => u.role === 'technician'));
+    
+    if (usersRes.success && usersRes.data) {
+      setTechnicians(usersRes.data.filter(u => u.role === 'technician'));
     }
+    
+    if (invoicesRes.success && invoicesRes.data) {
+      // Filter invoices for this object
+      setInvoices(invoicesRes.data.filter(inv => inv.objectId === Number(id)));
+    }
+    
+    if (inventoryRes.success && inventoryRes.data) {
+      // Filter inventory for this object
+      setInventory(inventoryRes.data.filter(item => item.objectId === Number(id)));
+    }
+    
+    setIsLoading(false);
   };
 
   const handleEdit = () => {
@@ -184,7 +206,7 @@ export const ObjectDetailPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {object.totalExpenses.toLocaleString('bg-BG')} €
+                {invoices.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('bg-BG')} €
               </p>
               <p className="text-sm text-gray-500">Общи разходи</p>
             </div>
@@ -197,7 +219,7 @@ export const ObjectDetailPage = () => {
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-2xl font-bold text-gray-900">{invoices.length}</p>
               <p className="text-sm text-gray-500">Фактури</p>
             </div>
           </div>
@@ -209,7 +231,7 @@ export const ObjectDetailPage = () => {
               <Package className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-2xl font-bold text-gray-900">{inventory.length}</p>
               <p className="text-sm text-gray-500">Инвентар</p>
             </div>
           </div>
@@ -271,10 +293,44 @@ export const ObjectDetailPage = () => {
             <FileText className="w-5 h-5" />
             Последни фактури
           </h2>
-          <div className="text-center py-8 text-gray-500">
-            <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>Няма фактури за този обект</p>
-          </div>
+          {invoices.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>Няма фактури за този обект</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {invoices.slice(0, 5).map((invoice) => (
+                <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{invoice.supplier}</p>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(invoice.date).toLocaleDateString('bg-BG')}</span>
+                        <span>•</span>
+                        <span>{invoice.invoiceNumber}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900">{invoice.total.toLocaleString()} €</p>
+                  </div>
+                </div>
+              ))}
+              {invoices.length > 5 && (
+                <Link 
+                  to="/invoices"
+                  className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                >
+                  Виж всички {invoices.length} фактури →
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -282,10 +338,53 @@ export const ObjectDetailPage = () => {
             <Package className="w-5 h-5" />
             Инвентар на обекта
           </h2>
-          <div className="text-center py-8 text-gray-500">
-            <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>Няма инвентар за този обект</p>
-          </div>
+          {inventory.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>Няма инвентар за този обект</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {inventory.slice(0, 5).map((item) => {
+                const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; label: string }> = {
+                  'available': { icon: CheckCircle, color: 'text-green-600 bg-green-100', label: 'Наличен' },
+                  'in-use': { icon: Wrench, color: 'text-blue-600 bg-blue-100', label: 'В употреба' },
+                  'maintenance': { icon: Clock, color: 'text-yellow-600 bg-yellow-100', label: 'В ремонт' },
+                  'lost': { icon: AlertTriangle, color: 'text-red-600 bg-red-100', label: 'Изгубен' },
+                };
+                const status = statusConfig[item.status] || statusConfig['available'];
+                const StatusIcon = status.icon;
+                
+                return (
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${status.color.split(' ')[1]}`}>
+                        <Package className={`w-5 h-5 ${status.color.split(' ')[0]}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{item.name}</p>
+                        <p className="text-sm text-gray-500">{item.category}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${status.color}`}>
+                        <StatusIcon className="w-3 h-3" />
+                        {status.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              {inventory.length > 5 && (
+                <Link 
+                  to="/inventory"
+                  className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                >
+                  Виж всичко ({inventory.length} артикула) →
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
