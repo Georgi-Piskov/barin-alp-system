@@ -23,6 +23,15 @@ export interface ConstructionObject {
   assignedTechnicians?: number[]; // User IDs
 }
 
+// Invoice Item types
+export interface InvoiceItem {
+  name: string;        // Наименование
+  unit: string;        // Мярка (бр, кг, м, м2, м3, л, торба, пакет)
+  quantity: number;    // Количество
+  unitPrice: number;   // Единична цена
+  totalPrice: number;  // Обща цена (quantity * unitPrice)
+}
+
 // Invoice types
 export interface Invoice {
   id: number;
@@ -31,6 +40,7 @@ export interface Invoice {
   invoiceNumber: string;
   total: number;
   description: string;
+  items: InvoiceItem[]; // Списък с артикули
   createdBy: number;
   createdByName: string;
   objectId: number | null; // null = unassigned (problematic)

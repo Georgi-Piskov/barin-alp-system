@@ -47,7 +47,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const rows = $input.all();\n\nconst invoices = rows.map(row => ({\n  id: Number(row.json.id),\n  date: row.json.date || '',\n  supplier: row.json.supplier || '',\n  invoiceNumber: row.json.invoiceNumber || '',\n  total: Number(row.json.total) || 0,\n  description: row.json.description || '',\n  createdBy: Number(row.json.createdBy) || 0,\n  createdByName: row.json.createdByName || '',\n  objectId: row.json.objectId ? Number(row.json.objectId) : null,\n  objectName: row.json.objectName || null\n}));\n\nreturn [{ json: { data: invoices } }];"
+        "jsCode": "const rows = $input.all();\n\nconst invoices = rows.map(row => {\n  // Parse items from JSON string\n  let items = [];\n  if (row.json.items) {\n    try {\n      items = JSON.parse(row.json.items);\n    } catch (e) {\n      items = [];\n    }\n  }\n  \n  return {\n    id: Number(row.json.id),\n    date: row.json.date || '',\n    supplier: row.json.supplier || '',\n    invoiceNumber: row.json.invoiceNumber || '',\n    total: Number(row.json.total) || 0,\n    description: row.json.description || '',\n    createdBy: Number(row.json.createdBy) || 0,\n    createdByName: row.json.createdByName || '',\n    objectId: row.json.objectId ? Number(row.json.objectId) : null,\n    objectName: row.json.objectName || null,\n    items: items\n  };\n});\n\nreturn [{ json: { data: invoices } }];"
       },
       "id": "code-format-invoices",
       "name": "Format Invoices",

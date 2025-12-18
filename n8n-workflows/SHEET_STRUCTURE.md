@@ -34,6 +34,7 @@
 | createdByName | Text | Георги Директор |
 | objectId | Number | 1 (object ID, null if unassigned) |
 | objectName | Text | бул. Витошка 10 |
+| items | Text | JSON string - [{"name":"Лепило","unit":"кг","quantity":5,"unitPrice":12,"totalPrice":60}] |
 
 ### 4. Inventory Sheet
 | Column | Type | Example |

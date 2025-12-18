@@ -47,7 +47,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const existingInvoices = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Calculate next ID\nlet maxId = 0;\nexistingInvoices.forEach(inv => {\n  const id = Number(inv.json.id);\n  if (id > maxId) maxId = id;\n});\nconst newId = maxId + 1;\n\nreturn [{\n  json: {\n    id: newId,\n    date: body.date,\n    supplier: body.supplier,\n    invoiceNumber: body.invoiceNumber,\n    total: body.total || 0,\n    description: body.description || '',\n    createdBy: body.createdBy,\n    createdByName: body.createdByName,\n    objectId: body.objectId || '',\n    objectName: body.objectName || ''\n  }\n}];"
+        "jsCode": "const existingInvoices = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Calculate next ID\nlet maxId = 0;\nexistingInvoices.forEach(inv => {\n  const id = Number(inv.json.id);\n  if (id > maxId) maxId = id;\n});\nconst newId = maxId + 1;\n\n// Serialize items to JSON string for Google Sheets\nconst itemsJson = JSON.stringify(body.items || []);\n\nreturn [{\n  json: {\n    id: newId,\n    date: body.date,\n    supplier: body.supplier,\n    invoiceNumber: body.invoiceNumber,\n    total: body.total || 0,\n    description: body.description || '',\n    createdBy: body.createdBy,\n    createdByName: body.createdByName,\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    items: itemsJson\n  }\n}];"
       },
       "id": "code-prepare-invoice",
       "name": "Prepare Invoice",
@@ -81,7 +81,8 @@
             "createdBy": "={{ $json.createdBy }}",
             "createdByName": "={{ $json.createdByName }}",
             "objectId": "={{ $json.objectId }}",
-            "objectName": "={{ $json.objectName }}"
+            "objectName": "={{ $json.objectName }}",
+            "items": "={{ $json.items }}"
           }
         },
         "options": {}
@@ -100,7 +101,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const inv = $('Prepare Invoice').first().json;\nconst body = $('Webhook Create').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: inv.id,\n      date: inv.date,\n      supplier: inv.supplier,\n      invoiceNumber: inv.invoiceNumber,\n      total: inv.total,\n      description: inv.description,\n      createdBy: inv.createdBy,\n      createdByName: inv.createdByName,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null\n    }\n  }\n}];"
+        "jsCode": "const inv = $('Prepare Invoice').first().json;\nconst body = $('Webhook Create').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: inv.id,\n      date: inv.date,\n      supplier: inv.supplier,\n      invoiceNumber: inv.invoiceNumber,\n      total: inv.total,\n      description: inv.description,\n      createdBy: inv.createdBy,\n      createdByName: inv.createdByName,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null,\n      items: body.items || []\n    }\n  }\n}];"
       },
       "id": "code-format-response",
       "name": "Format Response",
