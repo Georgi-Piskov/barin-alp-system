@@ -19,7 +19,7 @@ const api = axios.create({
 
 // For development/demo - mock data
 // Set to false when n8n backend is ready, or use env variable
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || false;
+const DEMO_MODE = false; // n8n backend is now active!
 
 // Mock users data (matches your Google Sheet)
 const MOCK_USERS: User[] = [
