@@ -1,7 +1,7 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
-import { ObjectsPage } from './pages/Objects';
+import { ObjectsPage, ObjectDetailPage } from './pages/Objects';
 import { InvoicesPage } from './pages/Invoices';
 import { InventoryPage } from './pages/Inventory';
 import { TransactionsPage } from './pages/Transactions';
@@ -25,7 +25,7 @@ function App() {
         >
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/objects" element={<ObjectsPage />} />
-          <Route path="/objects/:id" element={<ObjectsPage />} />
+          <Route path="/objects/:id" element={<ObjectDetailPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
