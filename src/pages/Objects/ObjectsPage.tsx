@@ -93,17 +93,29 @@ export const ObjectsPage = () => {
   };
 
   const handleSave = async (objectData: Omit<ConstructionObject, 'id'>) => {
+    console.log('Saving object data:', objectData);
+    
     if (editingObject) {
+      console.log('Updating object:', editingObject.id);
       const response = await apiService.updateObject(editingObject.id, objectData);
+      console.log('Update response:', response);
+      
       if (response.success && response.data) {
         setObjects(objects.map(obj => 
           obj.id === editingObject.id ? response.data! : obj
         ));
+      } else {
+        alert('Грешка при обновяване: ' + (response.error || 'Неизвестна грешка'));
       }
     } else {
+      console.log('Creating new object');
       const response = await apiService.createObject(objectData);
+      console.log('Create response:', response);
+      
       if (response.success && response.data) {
         setObjects([...objects, response.data]);
+      } else {
+        alert('Грешка при създаване: ' + (response.error || 'Неизвестна грешка'));
       }
     }
     setIsModalOpen(false);
