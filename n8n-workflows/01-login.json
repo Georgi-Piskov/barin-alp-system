@@ -5,6 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "barin-alp/login",
+        "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
         }

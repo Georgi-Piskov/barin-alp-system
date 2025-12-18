@@ -5,6 +5,7 @@
       "parameters": {
         "httpMethod": "DELETE",
         "path": "barin-alp/objects/delete",
+        "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
         }

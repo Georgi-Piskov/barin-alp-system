@@ -5,6 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "barin-alp/objects/create",
+        "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
         }

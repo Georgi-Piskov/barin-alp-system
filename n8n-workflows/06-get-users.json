@@ -5,6 +5,7 @@
       "parameters": {
         "httpMethod": "GET",
         "path": "barin-alp/users",
+        "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
         }
