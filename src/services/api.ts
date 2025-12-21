@@ -217,31 +217,42 @@ export const apiService = {
         params: { objectId },
       });
       
-      console.log('Get Invoices response from n8n:', response.data);
+      console.log('Get Invoices RAW response from n8n:', JSON.stringify(response.data, null, 2));
       
       // Parse items from JSON string if needed
-      const parseInvoiceItems = (invoice: Invoice): Invoice => {
-        if (typeof invoice.items === 'string') {
+      const parseInvoiceItems = (invoice: any): Invoice => {
+        // Parse items - could be string, array, or undefined
+        let items = invoice.items;
+        if (typeof items === 'string') {
           try {
-            invoice.items = JSON.parse(invoice.items);
+            items = JSON.parse(items);
           } catch {
-            invoice.items = [];
+            items = [];
           }
         }
-        if (!Array.isArray(invoice.items)) {
-          invoice.items = [];
+        if (!Array.isArray(items)) {
+          items = [];
         }
-        return invoice;
+        
+        return {
+          ...invoice,
+          items,
+          total: Number(invoice.total) || 0,
+          objectId: invoice.objectId ? Number(invoice.objectId) : null,
+          createdBy: Number(invoice.createdBy) || 0,
+        };
       };
       
       // n8n returns { data: [...] } format
       if (response.data?.data && Array.isArray(response.data.data)) {
         const invoices = response.data.data.map(parseInvoiceItems);
+        console.log('Parsed invoices:', invoices);
         return { success: true, data: invoices };
       }
       
       if (Array.isArray(response.data)) {
         const invoices = response.data.map(parseInvoiceItems);
+        console.log('Parsed invoices:', invoices);
         return { success: true, data: invoices };
       }
       
