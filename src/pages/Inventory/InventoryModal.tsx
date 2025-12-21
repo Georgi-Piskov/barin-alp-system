@@ -115,17 +115,32 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
             formData.name
           );
           
-          if (response.success && response.data?.url) {
-            uploadedPhotoUrls.push(response.data.url);
+          console.log('Photo upload response:', response);
+          
+          // Handle different response formats
+          let photoUrl: string | null = null;
+          if (response.success) {
+            if (response.data?.url) {
+              photoUrl = response.data.url;
+            } else if (typeof response.data === 'string') {
+              photoUrl = response.data;
+            }
+          }
+          
+          if (photoUrl) {
+            console.log('Photo URL to save:', photoUrl);
+            uploadedPhotoUrls.push(photoUrl);
           } else {
             // Don't save base64 - it's too large for Google Sheets
-            console.warn('Photo upload failed, skipping photo');
+            console.warn('Photo upload failed or no URL returned, skipping photo');
             failedUploads++;
           }
         } else {
           uploadedPhotoUrls.push(pendingPhoto);
         }
       }
+      
+      console.log('Final photos array to save:', uploadedPhotoUrls);
       
       if (failedUploads > 0) {
         setUploadError(`${failedUploads} снимка(и) не можаха да се качат. Проверете дали workflow 13-upload-photo е активен в n8n.`);
