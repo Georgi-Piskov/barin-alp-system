@@ -76,10 +76,15 @@ export const BankStatementsPage = () => {
       // Parse CSV
       const response = await apiService.parseBankStatement(csvText);
       
+      console.log('Bank statement response:', response);
+      
       if (response.success && response.data) {
-        setTransactions(response.data.transactions || []);
+        const txData = response.data.transactions || [];
+        console.log('Transactions count:', txData.length);
+        
+        setTransactions(txData);
         setStats({
-          count: response.data.count || 0,
+          count: response.data.count || txData.length || 0,
           totalDebit: response.data.totalDebit || 0,
           totalCredit: response.data.totalCredit || 0,
         });
@@ -96,16 +101,25 @@ export const BankStatementsPage = () => {
 
   // Try to match a bank transaction to an invoice
   const findMatchingInvoice = (bankTx: BankTransaction): Invoice | null => {
-    // Match by amount (±0.01) and date (±3 days)
-    const bankDate = new Date(bankTx.date);
+    if (!bankTx || !bankTx.date || !bankTx.amount) return null;
     
-    return invoices.find(inv => {
-      const invDate = new Date(inv.date);
-      const dateDiff = Math.abs(bankDate.getTime() - invDate.getTime()) / (1000 * 60 * 60 * 24);
-      const amountMatch = Math.abs(inv.total - bankTx.amount) < 0.02;
+    try {
+      // Match by amount (±0.01) and date (±3 days)
+      const bankDate = new Date(bankTx.date);
+      if (isNaN(bankDate.getTime())) return null;
       
-      return amountMatch && dateDiff <= 3;
-    }) || null;
+      return invoices.find(inv => {
+        const invDate = new Date(inv.date);
+        if (isNaN(invDate.getTime())) return false;
+        
+        const dateDiff = Math.abs(bankDate.getTime() - invDate.getTime()) / (1000 * 60 * 60 * 24);
+        const amountMatch = Math.abs(inv.total - bankTx.amount) < 0.02;
+        
+        return amountMatch && dateDiff <= 3;
+      }) || null;
+    } catch {
+      return null;
+    }
   };
 
   const clearData = () => {

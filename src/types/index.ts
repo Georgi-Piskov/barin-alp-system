@@ -136,8 +136,9 @@ export interface BankTransaction {
   description: string;
   type: 'debit' | 'credit';
   amount: number;
-  balance: number;
+  balance?: number;
   currency: string;
+  iban?: string;
   status: 'matched' | 'unmatched';
   matchedInvoiceId?: number;
 }
