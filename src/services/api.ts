@@ -667,17 +667,20 @@ export const apiService = {
       return { success: true };
     }
 
+    const url = `${buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_BANK_TRANSACTION)}/${id}`;
+    console.log('UPDATE BANK TX - URL:', url);
+    console.log('UPDATE BANK TX - Data:', data);
+
     try {
-      const response = await api.put(
-        `${buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_BANK_TRANSACTION)}/${id}`,
-        data
-      );
+      const response = await api.put(url, data);
       
       console.log('Update Bank Transaction response from n8n:', response.data);
       
       return { success: true, data: response.data };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Update Bank Transaction error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       return { success: false, error: 'Грешка при обновяване на банкова транзакция' };
     }
   },
