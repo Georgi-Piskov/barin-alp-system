@@ -16,7 +16,9 @@ import {
   Wrench,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { InventoryModal } from './InventoryModal';
 
@@ -65,6 +67,7 @@ export const InventoryPage = () => {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [photoIndices, setPhotoIndices] = useState<Record<number, number>>({});
 
   useEffect(() => {
     loadData();
@@ -348,29 +351,59 @@ export const InventoryPage = () => {
                   item.status === 'lost' ? 'border-red-200' : 'border-gray-200'
                 }`}
               >
-                {/* Photo */}
-                <div className="relative h-40 bg-gray-100">
+                {/* Photo Carousel */}
+                <div className="relative h-40 bg-gray-100 group">
                   {item.photos && item.photos.length > 0 ? (
-                    <img
-                      src={getImageUrl(item.photos[0])}
-                      alt={item.name}
-                      className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => setSelectedPhoto(getImageUrl(item.photos[0]))}
-                      onError={(e) => {
-                        // Fallback if image fails to load
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
+                    <>
+                      <img
+                        src={getImageUrl(item.photos[photoIndices[item.id] ?? (item.photos.length - 1)])}
+                        alt={item.name}
+                        className="w-full h-full object-cover cursor-pointer"
+                        onClick={() => setSelectedPhoto(getImageUrl(item.photos[photoIndices[item.id] ?? (item.photos.length - 1)]))}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      
+                      {/* Navigation arrows - only show if multiple photos */}
+                      {item.photos.length > 1 && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const currentIndex = photoIndices[item.id] ?? (item.photos.length - 1);
+                              const newIndex = currentIndex > 0 ? currentIndex - 1 : item.photos.length - 1;
+                              setPhotoIndices(prev => ({ ...prev, [item.id]: newIndex }));
+                            }}
+                            className="absolute left-1 top-1/2 -translate-y-1/2 p-1 bg-black/50 hover:bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const currentIndex = photoIndices[item.id] ?? (item.photos.length - 1);
+                              const newIndex = currentIndex < item.photos.length - 1 ? currentIndex + 1 : 0;
+                              setPhotoIndices(prev => ({ ...prev, [item.id]: newIndex }));
+                            }}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-black/50 hover:bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="w-16 h-16 text-gray-300" />
                     </div>
                   )}
                   
+                  {/* Photo counter and dots */}
                   {item.photos && item.photos.length > 1 && (
                     <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/60 rounded-lg text-white text-xs flex items-center gap-1">
                       <Camera className="w-3 h-3" />
-                      {item.photos.length}
+                      {(photoIndices[item.id] ?? (item.photos.length - 1)) + 1}/{item.photos.length}
                     </div>
                   )}
                   
