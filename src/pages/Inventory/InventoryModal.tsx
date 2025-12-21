@@ -28,6 +28,19 @@ const STATUSES = [
   { value: 'lost', label: 'Изгубен', color: 'red' },
 ];
 
+// Convert Google Drive URL to thumbnail/direct view URL
+const getImageUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url;
+  
+  const driveMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    const fileId = driveMatch[1];
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+  return url;
+};
+
 // Compress image to reduce size
 const compressImage = (base64: string, maxWidth = 800, quality = 0.7): Promise<string> => {
   return new Promise((resolve) => {
@@ -350,7 +363,7 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
                 {allPhotos.map((photo, index) => (
                   <div key={index} className="relative group">
                     <img
-                      src={photo}
+                      src={getImageUrl(photo)}
                       alt={`Снимка ${index + 1}`}
                       className="w-full h-24 object-cover rounded-lg border border-gray-200"
                     />

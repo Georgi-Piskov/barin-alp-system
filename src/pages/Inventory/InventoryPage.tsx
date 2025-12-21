@@ -27,6 +27,27 @@ const STATUS_CONFIG = {
   'lost': { label: 'Изгубен', color: 'red', icon: AlertTriangle },
 };
 
+// Convert Google Drive URL to thumbnail/direct view URL
+const getImageUrl = (url: string): string => {
+  if (!url) return '';
+  
+  // If it's a data URL (base64), return as-is
+  if (url.startsWith('data:')) return url;
+  
+  // If it's a Google Drive URL, convert to thumbnail format
+  // Format: https://drive.google.com/uc?export=view&id=FILE_ID
+  // Or: https://drive.google.com/uc?id=FILE_ID
+  const driveMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    const fileId = driveMatch[1];
+    // Use lh3.googleusercontent.com for better image serving
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+  
+  // If it's already a direct link, return as-is
+  return url;
+};
+
 export const InventoryPage = () => {
   const { user } = useAuthStore();
   const isDirector = user?.role === 'director';
@@ -331,10 +352,14 @@ export const InventoryPage = () => {
                 <div className="relative h-40 bg-gray-100">
                   {item.photos && item.photos.length > 0 ? (
                     <img
-                      src={item.photos[0]}
+                      src={getImageUrl(item.photos[0])}
                       alt={item.name}
                       className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => setSelectedPhoto(item.photos[0])}
+                      onClick={() => setSelectedPhoto(getImageUrl(item.photos[0]))}
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
