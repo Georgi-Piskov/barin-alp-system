@@ -19,16 +19,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get transactions from request body\nconst body = $input.item.json.body;\nconst transactions = body.transactions || [];\n\nif (!transactions.length) {\n  return [{ json: { success: false, error: 'No transactions provided' } }];\n}\n\n// Return transactions for processing\nreturn transactions.map(tx => ({ json: tx }));"
-      },
-      "id": "prepare",
-      "name": "Prepare Transactions",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [450, 300]
-    },
-    {
-      "parameters": {
         "operation": "read",
         "documentId": {
           "__rl": true,
@@ -47,7 +37,7 @@
       "name": "Get Existing Transactions",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [650, 300],
+      "position": [450, 300],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "YOUR_CREDENTIAL_ID",
@@ -57,13 +47,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get existing transactions and new transactions\nconst existingItems = $('Get Existing Transactions').all();\nconst newItems = $('Prepare Transactions').all();\n\n// Create set of existing references for quick lookup\nconst existingRefs = new Set();\nlet maxId = 0;\n\nexistingItems.forEach(item => {\n  if (item.json.reference) {\n    existingRefs.add(item.json.reference);\n  }\n  const id = parseInt(item.json.id) || 0;\n  if (id > maxId) maxId = id;\n});\n\n// Filter out duplicates and assign IDs\nconst toInsert = [];\nconst duplicates = [];\nconst importDate = new Date().toISOString().split('T')[0];\n\nnewItems.forEach(item => {\n  const tx = item.json;\n  \n  if (tx.reference && existingRefs.has(tx.reference)) {\n    duplicates.push(tx.reference);\n  } else {\n    maxId++;\n    toInsert.push({\n      id: maxId,\n      reference: tx.reference || '',\n      date: tx.date || '',\n      type: tx.type || 'debit',\n      amount: tx.amount || 0,\n      currency: tx.currency || 'BGN',\n      category: tx.category || 'other',\n      description: tx.description || '',\n      displayName: tx.displayName || '',\n      counterpartyName: tx.counterpartyName || '',\n      invoiceRef: tx.invoiceRef || '',\n      purpose: tx.purpose || '',\n      objectId: tx.objectId || '',\n      objectName: tx.objectName || '',\n      isCompanyExpense: tx.isCompanyExpense ? 'TRUE' : 'FALSE',\n      status: tx.status || 'unmatched',\n      importDate: importDate\n    });\n  }\n});\n\n// Store results for response\n$execution.customData.set('insertCount', toInsert.length);\n$execution.customData.set('duplicateCount', duplicates.length);\n\nif (toInsert.length === 0) {\n  return [{ json: { skip: true, duplicateCount: duplicates.length } }];\n}\n\nreturn toInsert.map(tx => ({ json: tx }));"
+        "jsCode": "// Get existing transactions and new transactions from request\nconst existingItems = $input.all();\nconst body = $('Webhook').first().json.body;\nconst newTransactions = body.transactions || [];\n\nif (!newTransactions.length) {\n  return [{ json: { success: true, insertedCount: 0, duplicateCount: 0, message: 'No transactions provided' } }];\n}\n\n// Create set of existing references for quick lookup\nconst existingRefs = new Set();\nlet maxId = 0;\n\nexistingItems.forEach(item => {\n  if (item.json.reference) {\n    existingRefs.add(String(item.json.reference));\n  }\n  const id = parseInt(item.json.id) || 0;\n  if (id > maxId) maxId = id;\n});\n\n// Filter out duplicates and assign IDs\nconst toInsert = [];\nlet duplicateCount = 0;\nconst importDate = new Date().toISOString().split('T')[0];\n\nnewTransactions.forEach(tx => {\n  const ref = String(tx.reference || '');\n  \n  if (ref && existingRefs.has(ref)) {\n    duplicateCount++;\n  } else {\n    maxId++;\n    toInsert.push({\n      id: maxId,\n      reference: tx.reference || '',\n      date: tx.date || '',\n      type: tx.type || 'debit',\n      amount: tx.amount || 0,\n      currency: tx.currency || 'BGN',\n      category: tx.category || 'other',\n      description: tx.description || '',\n      displayName: tx.displayName || '',\n      counterpartyName: tx.counterpartyName || '',\n      invoiceRef: tx.invoiceRef || '',\n      purpose: tx.purpose || '',\n      objectId: tx.objectId || '',\n      objectName: tx.objectName || '',\n      isCompanyExpense: tx.isCompanyExpense ? 'TRUE' : 'FALSE',\n      status: tx.status || 'unmatched',\n      importDate: importDate\n    });\n    // Add to set to prevent duplicates within same batch\n    if (ref) existingRefs.add(ref);\n  }\n});\n\n// Store counts for response\nconst insertCount = toInsert.length;\n\nif (toInsert.length === 0) {\n  return [{ json: { \n    success: true, \n    skip: true,\n    insertedCount: 0, \n    duplicateCount: duplicateCount,\n    message: `Всички ${duplicateCount} транзакции вече съществуват.`\n  } }];\n}\n\n// Return transactions with metadata\nreturn toInsert.map((tx, idx) => ({ \n  json: {\n    ...tx,\n    _meta: { insertCount, duplicateCount, isLast: idx === toInsert.length - 1 }\n  }\n}));"
       },
       "id": "filterDuplicates",
-      "name": "Filter Duplicates",
+      "name": "Filter Duplicates & Prepare",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [650, 300]
     },
     {
       "parameters": {
@@ -92,7 +82,7 @@
       "name": "Has New Transactions?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1050, 300]
+      "position": [850, 300]
     },
     {
       "parameters": {
@@ -136,7 +126,7 @@
       "name": "Append to Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1250, 200],
+      "position": [1050, 200],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "YOUR_CREDENTIAL_ID",
@@ -146,23 +136,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get counts from custom data\nconst insertCount = $execution.customData.get('insertCount') || 0;\nconst duplicateCount = $execution.customData.get('duplicateCount') || 0;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Записани ${insertCount} транзакции. Пропуснати ${duplicateCount} дубликати.`,\n    insertedCount: insertCount,\n    duplicateCount: duplicateCount\n  }\n}];"
+        "jsCode": "// Get the last item which has the counts\nconst items = $input.all();\nconst lastItem = items[items.length - 1];\nconst meta = lastItem.json._meta || { insertCount: items.length, duplicateCount: 0 };\n\nreturn [{\n  json: {\n    success: true,\n    message: `Записани ${meta.insertCount} транзакции. Пропуснати ${meta.duplicateCount} дубликати.`,\n    insertedCount: meta.insertCount,\n    duplicateCount: meta.duplicateCount\n  }\n}];"
       },
       "id": "successResponse",
       "name": "Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1450, 200]
-    },
-    {
-      "parameters": {
-        "jsCode": "// All were duplicates\nconst duplicateCount = $json.duplicateCount || 0;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Всички ${duplicateCount} транзакции вече съществуват.`,\n    insertedCount: 0,\n    duplicateCount: duplicateCount\n  }\n}];"
-      },
-      "id": "skipResponse",
-      "name": "Skip Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1250, 400]
+      "position": [1250, 200]
     },
     {
       "parameters": {
@@ -174,26 +154,21 @@
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1650, 300]
+      "position": [1450, 300]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [
-        [{ "node": "Prepare Transactions", "type": "main", "index": 0 }]
-      ]
-    },
-    "Prepare Transactions": {
       "main": [
         [{ "node": "Get Existing Transactions", "type": "main", "index": 0 }]
       ]
     },
     "Get Existing Transactions": {
       "main": [
-        [{ "node": "Filter Duplicates", "type": "main", "index": 0 }]
+        [{ "node": "Filter Duplicates & Prepare", "type": "main", "index": 0 }]
       ]
     },
-    "Filter Duplicates": {
+    "Filter Duplicates & Prepare": {
       "main": [
         [{ "node": "Has New Transactions?", "type": "main", "index": 0 }]
       ]
@@ -201,7 +176,7 @@
     "Has New Transactions?": {
       "main": [
         [{ "node": "Append to Sheet", "type": "main", "index": 0 }],
-        [{ "node": "Skip Response", "type": "main", "index": 0 }]
+        [{ "node": "Respond", "type": "main", "index": 0 }]
       ]
     },
     "Append to Sheet": {
@@ -210,11 +185,6 @@
       ]
     },
     "Success Response": {
-      "main": [
-        [{ "node": "Respond", "type": "main", "index": 0 }]
-      ]
-    },
-    "Skip Response": {
       "main": [
         [{ "node": "Respond", "type": "main", "index": 0 }]
       ]
