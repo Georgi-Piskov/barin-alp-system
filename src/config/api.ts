@@ -34,6 +34,9 @@ export const API_CONFIG = {
     UPDATE_INVENTORY: '/barin-alp/inventory/update',
     DELETE_INVENTORY: '/barin-alp/inventory/delete',
     
+    // Photos
+    UPLOAD_PHOTO: '/barin-alp/upload-photo',
+    
     // Transactions
     GET_TRANSACTIONS: '/barin-alp/transactions',
     CREATE_TRANSACTION: '/barin-alp/transactions/create',

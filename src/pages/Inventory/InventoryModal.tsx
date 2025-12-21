@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Package, Camera, Trash2, Upload } from 'lucide-react';
+import { X, Package, Camera, Trash2, Upload, Loader2, AlertCircle } from 'lucide-react';
 import { InventoryItem, ConstructionObject, User } from '../../types';
+import { apiService } from '../../services/api';
 
 interface InventoryModalProps {
   item: InventoryItem | null;
@@ -27,6 +28,36 @@ const STATUSES = [
   { value: 'lost', label: 'Изгубен', color: 'red' },
 ];
 
+// Compress image to reduce size
+const compressImage = (base64: string, maxWidth = 800, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // Scale down if too large
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      // Convert to compressed JPEG
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressed);
+    };
+    img.onerror = () => resolve(base64); // Return original on error
+    img.src = base64;
+  });
+};
+
 export const InventoryModal = ({ item, objects, users, onSave, onClose }: InventoryModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -38,7 +69,9 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
     objectName: null as string | null,
     photos: [] as string[],
   });
+  const [pendingPhotos, setPendingPhotos] = useState<string[]>([]); // New photos to upload
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -62,9 +95,43 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
     
     if (isSaving) return;
     setIsSaving(true);
+    setUploadError(null);
 
     try {
-      await onSave(formData);
+      // Upload any pending photos to Google Drive first
+      let uploadedPhotoUrls: string[] = [...formData.photos];
+      let failedUploads = 0;
+      
+      for (const pendingPhoto of pendingPhotos) {
+        // Only upload if it's a base64 image (not already a URL)
+        if (pendingPhoto.startsWith('data:')) {
+          // Compress the image first
+          const compressedPhoto = await compressImage(pendingPhoto);
+          
+          const response = await apiService.uploadPhoto(
+            compressedPhoto,
+            `${formData.name || 'item'}_${Date.now()}.jpg`,
+            item?.id,
+            formData.name
+          );
+          
+          if (response.success && response.data?.url) {
+            uploadedPhotoUrls.push(response.data.url);
+          } else {
+            // Don't save base64 - it's too large for Google Sheets
+            console.warn('Photo upload failed, skipping photo');
+            failedUploads++;
+          }
+        } else {
+          uploadedPhotoUrls.push(pendingPhoto);
+        }
+      }
+      
+      if (failedUploads > 0) {
+        setUploadError(`${failedUploads} снимка(и) не можаха да се качат. Проверете дали workflow 13-upload-photo е активен в n8n.`);
+      }
+      
+      await onSave({ ...formData, photos: uploadedPhotoUrls });
     } finally {
       setIsSaving(false);
     }
@@ -96,30 +163,40 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    // Convert files to base64 or URLs
-    Array.from(files).forEach(file => {
+    // Convert files to base64 and compress
+    for (const file of Array.from(files)) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const base64 = event.target?.result as string;
-        setFormData(prev => ({
-          ...prev,
-          photos: [...prev.photos, base64],
-        }));
+        // Compress the image immediately for preview
+        const compressed = await compressImage(base64, 800, 0.7);
+        // Add to pending photos instead of formData directly
+        setPendingPhotos(prev => [...prev, compressed]);
       };
       reader.readAsDataURL(file);
-    });
+    }
   };
 
   const removePhoto = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index),
-    }));
+    // Check if it's from existing photos or pending photos
+    if (index < formData.photos.length) {
+      setFormData(prev => ({
+        ...prev,
+        photos: prev.photos.filter((_, i) => i !== index),
+      }));
+    } else {
+      // It's a pending photo
+      const pendingIndex = index - formData.photos.length;
+      setPendingPhotos(prev => prev.filter((_, i) => i !== pendingIndex));
+    }
   };
+
+  // Combine existing photos with pending ones for display
+  const allPhotos = [...formData.photos, ...pendingPhotos];
 
   // Filter technicians only
   const technicians = users.filter(u => u.role === 'technician');
@@ -153,6 +230,14 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-180px)]">
+          {/* Upload Error */}
+          {uploadError && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm">{uploadError}</span>
+            </div>
+          )}
+
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -237,19 +322,29 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
           {/* Photos */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Снимки
+              Снимки {pendingPhotos.length > 0 && (
+                <span className="text-xs text-amber-600 ml-2">
+                  ({pendingPhotos.length} нови за качване)
+                </span>
+              )}
             </label>
             
             {/* Photo grid */}
-            {formData.photos.length > 0 && (
+            {allPhotos.length > 0 && (
               <div className="grid grid-cols-4 gap-2 mb-3">
-                {formData.photos.map((photo, index) => (
+                {allPhotos.map((photo, index) => (
                   <div key={index} className="relative group">
                     <img
                       src={photo}
                       alt={`Снимка ${index + 1}`}
                       className="w-full h-24 object-cover rounded-lg border border-gray-200"
                     />
+                    {/* Show indicator for pending photos */}
+                    {index >= formData.photos.length && (
+                      <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-amber-500 text-white text-[10px] rounded-full">
+                        Ново
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => removePhoto(index)}
@@ -300,8 +395,8 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
             >
               {isSaving ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Запазване...</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{pendingPhotos.length > 0 ? 'Качване на снимки...' : 'Запазване...'}</span>
                 </>
               ) : (
                 <>
@@ -310,8 +405,7 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
                 </>
               )}
             </button>
-          </div>
-        </form>
+          </div>        </form>
       </div>
     </div>
   );

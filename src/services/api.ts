@@ -394,6 +394,37 @@ export const apiService = {
     }
   },
 
+  // ==================== PHOTOS ====================
+  async uploadPhoto(photo: string, fileName?: string, itemId?: number, itemName?: string): Promise<ApiResponse<{ url: string; fileId: string }>> {
+    if (DEMO_MODE) {
+      // In demo mode, just return the base64 as-is
+      return { success: true, data: { url: photo, fileId: 'demo' } };
+    }
+
+    try {
+      const response = await api.post(
+        buildApiUrl(API_CONFIG.ENDPOINTS.UPLOAD_PHOTO),
+        {
+          photo,
+          fileName: fileName || `photo_${Date.now()}.jpg`,
+          itemId,
+          itemName,
+        }
+      );
+      
+      console.log('Upload Photo response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Upload Photo error:', error);
+      return { success: false, error: 'Грешка при качване на снимка' };
+    }
+  },
+
   // ==================== TRANSACTIONS ====================
   async getTransactions(objectId?: number): Promise<ApiResponse<Transaction[]>> {
     if (DEMO_MODE) {

@@ -1,0 +1,161 @@
+{
+  "name": "BARIN-ALP: Upload Photo to Drive",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/upload-photo",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "rawBody": true
+        }
+      },
+      "id": "webhook-upload-photo",
+      "name": "Webhook Upload",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-upload-photo"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\n// Extract base64 data\nlet base64Data = body.photo;\nlet fileName = body.fileName || `photo_${Date.now()}.jpg`;\nlet mimeType = 'image/jpeg';\n\n// Handle data URL format (data:image/jpeg;base64,...)\nif (base64Data.startsWith('data:')) {\n  const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);\n  if (matches) {\n    mimeType = matches[1];\n    base64Data = matches[2];\n    \n    // Set correct extension based on mime type\n    const ext = mimeType.split('/')[1];\n    if (!fileName.includes('.')) {\n      fileName = `${fileName}.${ext}`;\n    }\n  }\n}\n\n// Convert base64 to binary\nconst binaryData = Buffer.from(base64Data, 'base64');\n\nreturn [{\n  json: {\n    fileName: fileName,\n    mimeType: mimeType,\n    itemId: body.itemId,\n    itemName: body.itemName\n  },\n  binary: {\n    photo: {\n      data: binaryData.toString('base64'),\n      mimeType: mimeType,\n      fileName: fileName\n    }\n  }\n}];"
+      },
+      "id": "code-prepare-file",
+      "name": "Prepare File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $json.fileName }}",
+        "folderId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
+          "mode": "id"
+        },
+        "options": {
+          "fields": ["id", "name", "webViewLink", "webContentLink"]
+        }
+      },
+      "id": "drive-upload",
+      "name": "Upload to Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [690, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "permission",
+        "fileId": "={{ $json.id }}",
+        "permissionOptions": {
+          "role": "reader",
+          "type": "anyone"
+        },
+        "options": {}
+      },
+      "id": "drive-set-permissions",
+      "name": "Make Public",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [910, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const driveFile = $('Upload to Drive').first().json;\nconst inputData = $('Prepare File').first().json;\n\n// Create direct link to the image\n// Format: https://drive.google.com/uc?id=FILE_ID\nconst directUrl = `https://drive.google.com/uc?id=${driveFile.id}`;\nconst viewUrl = driveFile.webViewLink;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      fileId: driveFile.id,\n      fileName: driveFile.name,\n      url: directUrl,\n      viewUrl: viewUrl,\n      itemId: inputData.itemId,\n      itemName: inputData.itemName\n    }\n  }\n}];"
+      },
+      "id": "code-format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-upload",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Upload": {
+      "main": [
+        [
+          {
+            "node": "Prepare File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare File": {
+      "main": [
+        [
+          {
+            "node": "Upload to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Drive": {
+      "main": [
+        [
+          {
+            "node": "Make Public",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make Public": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

@@ -73,6 +73,13 @@
 | Update Object | PUT | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/objects/update` |
 | Delete Object | DELETE | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/objects/delete` |
 | Get Users | GET | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/users` |
+| Get Invoices | GET | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/invoices` |
+| Create Invoice | POST | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/invoices/create` |
+| Get Inventory | GET | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/inventory` |
+| Create Inventory | POST | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/inventory/create` |
+| Update Inventory | PUT | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/inventory/update` |
+| Delete Inventory | DELETE | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/inventory/delete` |
+| Upload Photo | POST | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/upload-photo` |
 
 ---
 
@@ -106,6 +113,37 @@ curl -X POST https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/obje
 2. **Сигурност:** В продукция е добре да ограничиш origins само до твоя домейн
 
 3. **Sheet колони:** Колоните в Google Sheet трябва да съвпадат точно с тези в workflows
+
+---
+
+## 📸 Upload Photo Workflow (13-upload-photo.json)
+
+Този workflow качва снимки в Google Drive вместо да ги съхранява като base64 в Google Sheets.
+
+### Допълнителна конфигурация:
+
+1. **Google Drive Credential:**
+   - Отиди в n8n → Settings → Credentials
+   - Добави "Google Drive OAuth2 API"
+   - Свържи със същия Google акаунт
+
+2. **Създай папка в Google Drive:**
+   - Създай папка `BARIN-ALP-Photos` в Google Drive
+   - Копирай ID на папката от URL-а (последната част след `/folders/`)
+
+3. **В workflow-а заредете:**
+   - Отвори workflow 13-upload-photo.json
+   - В "Upload to Google Drive" node:
+     - Избери твоя Google Drive credential
+     - Замени `YOUR_GOOGLE_DRIVE_FOLDER_ID` с истинското ID на папката
+   - В "Make File Public" node:
+     - Избери същия credential
+
+### Как работи:
+1. Приема base64 изображение
+2. Качва го в Google Drive папката
+3. Прави файла публичен за четене
+4. Връща URL за директен достъп
 
 ---
 
