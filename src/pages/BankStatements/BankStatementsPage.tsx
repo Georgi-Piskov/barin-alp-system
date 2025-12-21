@@ -172,30 +172,48 @@ export const BankStatementsPage = () => {
     const tx = transactions[txIndex];
     const obj = objects.find(o => o.id === objectId);
     
-    // Update locally first
-    const updatedTransactions = [...transactions];
-    updatedTransactions[txIndex] = {
-      ...updatedTransactions[txIndex],
-      objectId,
-      objectName: obj?.name || null,
-      status: objectId ? 'matched' : 'unmatched',
-    };
-    setTransactions(updatedTransactions);
-    
     // Save to database if transaction has ID
     if (tx.id) {
       try {
-        await apiService.updateBankTransaction(tx.id, {
+        const response = await apiService.updateBankTransaction(tx.id, {
           objectId,
           objectName: obj?.name || '',
           status: objectId ? 'matched' : 'unmatched',
         });
-        setSuccessMessage('Транзакцията е зачислена към обекта');
-        setTimeout(() => setSuccessMessage(null), 3000);
+        
+        console.log('Update bank transaction response:', response);
+        
+        if (response.success) {
+          // Update locally only on success
+          const updatedTransactions = [...transactions];
+          updatedTransactions[txIndex] = {
+            ...updatedTransactions[txIndex],
+            objectId,
+            objectName: obj?.name || null,
+            status: objectId ? 'matched' : 'unmatched',
+          };
+          setTransactions(updatedTransactions);
+          setSuccessMessage('Транзакцията е зачислена към обекта');
+          setTimeout(() => setSuccessMessage(null), 3000);
+        } else {
+          setError(response.error || 'Грешка при запазване');
+          setTimeout(() => setError(null), 5000);
+        }
       } catch (err) {
         console.error('Error updating transaction:', err);
         setError('Грешка при запазване на промените');
+        setTimeout(() => setError(null), 5000);
       }
+    } else {
+      // No ID - just update locally (new transaction not saved yet)
+      const updatedTransactions = [...transactions];
+      updatedTransactions[txIndex] = {
+        ...updatedTransactions[txIndex],
+        objectId,
+        objectName: obj?.name || null,
+        status: objectId ? 'matched' : 'unmatched',
+      };
+      setTransactions(updatedTransactions);
     }
   };
 
