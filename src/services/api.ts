@@ -223,6 +223,22 @@ export const apiService = {
       const parseInvoiceItems = (invoice: any): Invoice => {
         // Parse items - could be string, array, or undefined
         let items = invoice.items;
+        
+        // Check if items is in wrong column (objectName might contain JSON)
+        if ((!items || items === '[]' || items === '') && invoice.objectName) {
+          // Check if objectName looks like JSON array
+          if (typeof invoice.objectName === 'string' && invoice.objectName.startsWith('[')) {
+            try {
+              items = JSON.parse(invoice.objectName);
+              // Clear objectName since it was actually items
+              invoice.objectName = null;
+              invoice.objectId = null;
+            } catch {
+              // Not JSON, keep as objectName
+            }
+          }
+        }
+        
         if (typeof items === 'string') {
           try {
             items = JSON.parse(items);
