@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { Transaction, User } from '../../types';
+import { Transaction, User, ConstructionObject } from '../../types';
 import { 
   Receipt, 
   Plus,
@@ -22,13 +22,15 @@ interface NewTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   users: User[];
+  objects: ConstructionObject[];
   onSubmit: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
 }
 
-const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactionModalProps) => {
+const NewTransactionModal = ({ isOpen, onClose, users, objects, onSubmit }: NewTransactionModalProps) => {
   const { user } = useAuthStore();
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [selectedUser, setSelectedUser] = useState<number>(0);
+  const [selectedObject, setSelectedObject] = useState<number>(0);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'cash' | 'bank'>('cash');
   const [description, setDescription] = useState('');
@@ -55,6 +57,9 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
       targetUserName = user?.name || 'Директор';
     }
 
+    // Get selected object info
+    const selectedObj = objects.find(o => o.id === selectedObject);
+    
     setIsSubmitting(true);
     
     await onSubmit({
@@ -67,6 +72,8 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
       createdBy: user?.id || 0,
       createdByName: user?.name,
       method,
+      objectId: selectedObject || undefined,
+      objectName: selectedObj?.name,
     });
     
     setIsSubmitting(false);
@@ -74,6 +81,7 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
     // Reset form
     setType('expense');
     setSelectedUser(0);
+    setSelectedObject(0);
     setAmount('');
     setMethod('cash');
     setDescription('');
@@ -208,6 +216,30 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
             </div>
           </div>
 
+          {/* Object Selection - only for expenses */}
+          {type === 'expense' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Обект (по избор)
+              </label>
+              <select
+                value={selectedObject}
+                onChange={(e) => setSelectedObject(Number(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value={0}>-- Без обект --</option>
+                {objects.map((obj) => (
+                  <option key={obj.id} value={obj.id}>
+                    {obj.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                🏗️ Избери обект ако разходът е свързан с конкретен обект
+              </p>
+            </div>
+          )}
+
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -273,6 +305,7 @@ export const TransactionsPage = () => {
   const { user } = useAuthStore();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [objects, setObjects] = useState<ConstructionObject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -294,9 +327,10 @@ export const TransactionsPage = () => {
     setIsLoading(true);
     
     try {
-      const [transactionsRes, usersRes] = await Promise.all([
+      const [transactionsRes, usersRes, objectsRes] = await Promise.all([
         apiService.getTransactions(),
         apiService.getUsers(),
+        apiService.getObjects(),
       ]);
       
       if (transactionsRes.success && transactionsRes.data) {
@@ -305,6 +339,10 @@ export const TransactionsPage = () => {
       
       if (usersRes.success && usersRes.data) {
         setUsers(usersRes.data);
+      }
+
+      if (objectsRes.success && objectsRes.data) {
+        setObjects(objectsRes.data);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -654,6 +692,7 @@ export const TransactionsPage = () => {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         users={users}
+        objects={objects}
         onSubmit={handleCreateTransaction}
       />
     </div>
