@@ -340,7 +340,7 @@ export const InvoicesPage = () => {
                 {filteredInvoices.map((invoice) => {
                   const items = getInvoiceItems(invoice);
                   const objectName = getObjectName(invoice);
-                  const hasObject = invoice.objectId || objectName;
+                  const hasObject = Boolean(invoice.objectId) || Boolean(objectName);
                   
                   return (
                   <React.Fragment key={invoice.id}>
@@ -376,10 +376,10 @@ export const InvoicesPage = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        {hasObject ? (
+                        {hasObject && objectName ? (
                           <div className="flex items-center gap-2">
                             <Building2 className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-900">{objectName || invoice.objectName}</span>
+                            <span className="text-sm text-gray-900">{objectName}</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 text-red-600">
