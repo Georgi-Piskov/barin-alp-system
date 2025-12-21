@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get transaction ID from path and data from body\nconst params = $input.item.json.params;\nconst body = $input.item.json.body;\n\nconst transactionId = params.id;\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\n\nconsole.log('Update Bank Transaction Request:', { transactionId, objectId, objectName, status });\n\nif (!transactionId) {\n  return [{ json: { success: false, error: 'Transaction ID is required' } }];\n}\n\nreturn [{ \n  json: { \n    transactionId: String(transactionId),\n    objectId: objectId !== null && objectId !== undefined ? String(objectId) : '',\n    objectName: objectName,\n    status: status\n  } \n}];"
+        "jsCode": "const params = $input.item.json.params;\nconst body = $input.item.json.body;\n\nconst transactionId = params.id;\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\n\nconsole.log('Input params:', params);\nconsole.log('Input body:', body);\n\nif (!transactionId) {\n  throw new Error('Transaction ID is required');\n}\n\nreturn [{ \n  json: { \n    id: parseInt(transactionId),\n    objectId: objectId !== null && objectId !== undefined ? String(objectId) : '',\n    objectName: objectName,\n    status: status\n  } \n}];"
       },
       "id": "prepare",
       "name": "Prepare Data",
@@ -29,7 +29,7 @@
     },
     {
       "parameters": {
-        "operation": "read",
+        "operation": "update",
         "documentId": {
           "__rl": true,
           "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
@@ -41,10 +41,28 @@
           "mode": "list",
           "cachedResultName": "BankTransactions"
         },
-        "options": {}
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "status": "={{ $json.status }}"
+          },
+          "matchingColumns": ["id"],
+          "schema": [
+            {"id": "id", "displayName": "id", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "objectId", "displayName": "objectId", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "objectName", "displayName": "objectName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "status", "displayName": "status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
       },
-      "id": "readAll",
-      "name": "Read All Rows",
+      "id": "updateSheet",
+      "name": "Update Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [650, 300],
@@ -57,108 +75,25 @@
     },
     {
       "parameters": {
-        "jsCode": "const preparedData = $('Prepare Data').first().json;\nconst allRows = $input.all().map(i => i.json);\nconst targetId = String(preparedData.transactionId);\n\nconsole.log('Looking for row with ID:', targetId);\nconsole.log('Available IDs:', allRows.map(r => r.id).slice(0, 10));\n\n// Find the row index (1-based for header + data)\nlet rowIndex = -1;\nfor (let i = 0; i < allRows.length; i++) {\n  if (String(allRows[i].id) === targetId) {\n    rowIndex = i + 2; // +1 for 0-index, +1 for header row\n    break;\n  }\n}\n\nconsole.log('Found row index:', rowIndex);\n\nif (rowIndex === -1) {\n  return [{ json: { success: false, error: `Transaction with ID ${targetId} not found` } }];\n}\n\nreturn [{ \n  json: { \n    rowIndex,\n    transactionId: preparedData.transactionId,\n    objectId: preparedData.objectId,\n    objectName: preparedData.objectName,\n    status: preparedData.status\n  } \n}];"
+        "jsCode": "const input = $('Prepare Data').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: 'Транзакция обновена успешно',\n    transactionId: input.id,\n    objectId: input.objectId,\n    objectName: input.objectName,\n    status: input.status\n  }\n}];"
       },
-      "id": "findRow",
-      "name": "Find Row",
+      "id": "response",
+      "name": "Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [850, 300]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "condition-check",
-              "leftValue": "={{ $json.rowIndex }}",
-              "rightValue": "-1",
-              "operator": {
-                "type": "number",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
       },
-      "id": "checkFound",
-      "name": "Row Found?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "position": [1050, 300]
-    },
-    {
-      "parameters": {
-        "method": "PUT",
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/values/BankTransactions!M{{ $json.rowIndex }}:P{{ $json.rowIndex }}?valueInputOption=USER_ENTERED",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"values\": [\n    [\"{{ $json.objectId }}\", \"{{ $json.objectName }}\", \"\", \"{{ $json.status }}\"]\n  ]\n}"
-      },
-      "id": "updateCells",
-      "name": "Update Cells",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1250, 200],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "YOUR_CREDENTIAL_ID",
-          "name": "Google Sheets"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $('Find Row').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Транзакция ${data.transactionId} е обновена успешно.`,\n    transactionId: data.transactionId,\n    objectId: data.objectId,\n    objectName: data.objectName,\n    status: data.status,\n    rowUpdated: data.rowIndex\n  }\n}];"
-      },
-      "id": "successResponse",
-      "name": "Success Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1450, 200]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $('Find Row').first().json;\n\nreturn [{\n  json: {\n    success: false,\n    error: data.error || 'Transaction not found'\n  }\n}];"
-      },
-      "id": "errorResponse",
-      "name": "Error Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1250, 400]
-    },
-    {
-      "parameters": {
-        "options": {},
-        "respondWith": "json",
-        "responseBody": "={{ $json }}"
-      },
-      "id": "respondSuccess",
-      "name": "Respond Success",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [1650, 200]
-    },
-    {
-      "parameters": {
-        "options": {},
-        "respondWith": "json",
-        "responseBody": "={{ $json }}"
-      },
-      "id": "respondError",
-      "name": "Respond Error",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [1450, 400]
     }
   ],
   "connections": {
@@ -169,38 +104,17 @@
     },
     "Prepare Data": {
       "main": [
-        [{ "node": "Read All Rows", "type": "main", "index": 0 }]
+        [{ "node": "Update Sheet", "type": "main", "index": 0 }]
       ]
     },
-    "Read All Rows": {
-      "main": [
-        [{ "node": "Find Row", "type": "main", "index": 0 }]
-      ]
-    },
-    "Find Row": {
-      "main": [
-        [{ "node": "Row Found?", "type": "main", "index": 0 }]
-      ]
-    },
-    "Row Found?": {
-      "main": [
-        [{ "node": "Update Cells", "type": "main", "index": 0 }],
-        [{ "node": "Error Response", "type": "main", "index": 0 }]
-      ]
-    },
-    "Update Cells": {
+    "Update Sheet": {
       "main": [
         [{ "node": "Success Response", "type": "main", "index": 0 }]
       ]
     },
     "Success Response": {
       "main": [
-        [{ "node": "Respond Success", "type": "main", "index": 0 }]
-      ]
-    },
-    "Error Response": {
-      "main": [
-        [{ "node": "Respond Error", "type": "main", "index": 0 }]
+        [{ "node": "Respond", "type": "main", "index": 0 }]
       ]
     }
   },
