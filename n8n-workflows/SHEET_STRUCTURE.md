@@ -71,6 +71,38 @@
 | L | method | Text | cash / bank |
 | M | invoiceId | Number | 1 (optional, links to invoice) |
 
+### 6. BankTransactions Sheet (Колони A-Q)
+| Колона | Header | Type | Example |
+|--------|--------|------|---------|
+| A | id | Number | 1 |
+| B | reference | Text | 6235694 (уникален референтен номер от банката) |
+| C | date | Date | 2024-12-19 |
+| D | type | Text | debit / credit |
+| E | amount | Number | 600.00 |
+| F | currency | Text | BGN |
+| G | category | Text | cash_withdrawal / bank_fees / loan_payment / transfer / other |
+| H | description | Text | Картови транзакции |
+| I | displayName | Text | Изтеглени пари в брой |
+| J | counterpartyName | Text | СТРОЙ ООД |
+| K | invoiceRef | Text | 123/2024 (номер на фактура от основание) |
+| L | purpose | Text | Плащане по фактура 123/2024 |
+| M | objectId | Number | 1 (празно ако не е зачислена) |
+| N | objectName | Text | бул. Витошка 10 |
+| O | isCompanyExpense | Boolean | TRUE / FALSE |
+| P | status | Text | unmatched / matched / processed |
+| Q | importDate | Date | 2024-12-21 (дата на импорт) |
+
+**⚠️ ВАЖНО за BankTransactions:**
+- `reference` е уникален - използва се за проверка за дубликати при импорт
+- `category` определя типа: 
+  - `cash_withdrawal` = Изтеглени пари в брой (Картови транзакции)
+  - `bank_fees` = Банкови такси
+  - `loan_payment` = Погасяване на кредит
+  - `transfer` = Преводи по фактури
+  - `other` = Други
+- `objectId` се попълва когато транзакцията се зачисли към обект
+- `status`: `unmatched` (нова), `matched` (зачислена към обект), `processed` (обработена)
+
 ---
 
 ## ⚠️ Важни бележки

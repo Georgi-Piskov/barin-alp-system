@@ -48,6 +48,9 @@ export const API_CONFIG = {
     
     // Bank Statements
     PARSE_BANK_STATEMENT: '/barin-alp/bank-statement',
+    GET_BANK_TRANSACTIONS: '/barin-alp/bank-transactions',
+    SAVE_BANK_TRANSACTIONS: '/barin-alp/bank-transactions/save',
+    UPDATE_BANK_TRANSACTION: '/barin-alp/bank-transactions', // + /:id
   }
 };
 

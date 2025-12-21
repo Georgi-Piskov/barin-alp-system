@@ -26,6 +26,7 @@ export const BankStatementsPage = () => {
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
   const [_invoices, setInvoices] = useState<Invoice[]>([]);
   const [objects, setObjects] = useState<ConstructionObject[]>([]);
@@ -61,6 +62,29 @@ export const BankStatementsPage = () => {
     loadObjects();
   }, []);
 
+  // Load saved bank transactions on mount
+  useEffect(() => {
+    const loadSavedTransactions = async () => {
+      setIsLoading(true);
+      const response = await apiService.getBankTransactions();
+      if (response.success && response.data) {
+        const txData = response.data.transactions || [];
+        setTransactions(txData);
+        setStats({
+          count: response.data.count || txData.length || 0,
+          totalDebit: response.data.totalDebit || 0,
+          totalCredit: response.data.totalCredit || 0,
+          bankFeesTotal: response.data.bankFeesTotal || 0,
+          loanPaymentsTotal: response.data.loanPaymentsTotal || 0,
+          cashWithdrawalTotal: response.data.cashWithdrawalTotal || 0,
+          netChange: response.data.netChange || 0,
+        });
+      }
+      setIsLoading(false);
+    };
+    loadSavedTransactions();
+  }, []);
+
   // Load invoices for matching
   const loadInvoices = async () => {
     const response = await apiService.getInvoices();
@@ -85,6 +109,7 @@ export const BankStatementsPage = () => {
 
     setIsLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const csvText = await new Promise<string>((resolve, reject) => {
@@ -102,16 +127,36 @@ export const BankStatementsPage = () => {
       
       if (response.success && response.data) {
         const txData = response.data.transactions || [];
-        setTransactions(txData);
-        setStats({
-          count: response.data.count || txData.length || 0,
-          totalDebit: response.data.totalDebit || 0,
-          totalCredit: response.data.totalCredit || 0,
-          bankFeesTotal: response.data.bankFeesTotal || 0,
-          loanPaymentsTotal: response.data.loanPaymentsTotal || 0,
-          cashWithdrawalTotal: response.data.cashWithdrawalTotal || 0,
-          netChange: response.data.netChange || 0,
-        });
+        
+        // Save transactions to Google Sheets
+        if (txData.length > 0) {
+          const saveResponse = await apiService.saveBankTransactions(txData);
+          
+          if (saveResponse.success && saveResponse.data) {
+            const { insertedCount, duplicateCount } = saveResponse.data;
+            if (insertedCount > 0) {
+              setSuccessMessage(`Записани ${insertedCount} нови транзакции. ${duplicateCount > 0 ? `${duplicateCount} дубликати пропуснати.` : ''}`);
+            } else if (duplicateCount > 0) {
+              setSuccessMessage(`Всички ${duplicateCount} транзакции вече съществуват в базата.`);
+            }
+          }
+        }
+        
+        // Reload from database to get IDs
+        const reloadResponse = await apiService.getBankTransactions();
+        if (reloadResponse.success && reloadResponse.data) {
+          const reloadedData = reloadResponse.data.transactions || [];
+          setTransactions(reloadedData);
+          setStats({
+            count: reloadResponse.data.count || reloadedData.length || 0,
+            totalDebit: reloadResponse.data.totalDebit || 0,
+            totalCredit: reloadResponse.data.totalCredit || 0,
+            bankFeesTotal: reloadResponse.data.bankFeesTotal || 0,
+            loanPaymentsTotal: reloadResponse.data.loanPaymentsTotal || 0,
+            cashWithdrawalTotal: reloadResponse.data.cashWithdrawalTotal || 0,
+            netChange: reloadResponse.data.netChange || 0,
+          });
+        }
       } else {
         setError(response.error || 'Грешка при парсване на файла');
       }
@@ -123,15 +168,35 @@ export const BankStatementsPage = () => {
     setIsLoading(false);
   };
 
-  const handleObjectAssign = (txIndex: number, objectId: number | null) => {
-    const updatedTransactions = [...transactions];
+  const handleObjectAssign = async (txIndex: number, objectId: number | null) => {
+    const tx = transactions[txIndex];
     const obj = objects.find(o => o.id === objectId);
+    
+    // Update locally first
+    const updatedTransactions = [...transactions];
     updatedTransactions[txIndex] = {
       ...updatedTransactions[txIndex],
       objectId,
       objectName: obj?.name || null,
+      status: objectId ? 'matched' : 'unmatched',
     };
     setTransactions(updatedTransactions);
+    
+    // Save to database if transaction has ID
+    if (tx.id) {
+      try {
+        await apiService.updateBankTransaction(tx.id, {
+          objectId,
+          objectName: obj?.name || '',
+          status: objectId ? 'matched' : 'unmatched',
+        });
+        setSuccessMessage('Транзакцията е зачислена към обекта');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } catch (err) {
+        console.error('Error updating transaction:', err);
+        setError('Грешка при запазване на промените');
+      }
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -259,6 +324,13 @@ export const BankStatementsPage = () => {
             <div className="mt-4 px-4 py-2 bg-red-50 text-red-600 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               {error}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="mt-4 px-4 py-2 bg-green-50 text-green-600 rounded-lg flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              {successMessage}
             </div>
           )}
 

@@ -9,6 +9,7 @@ import {
   ApiResponse,
   DashboardStats,
   BankStatementParseResult,
+  BankTransaction,
 } from '../types';
 
 // Create axios instance
@@ -607,6 +608,77 @@ export const apiService = {
     } catch (error) {
       console.error('Parse Bank Statement error:', error);
       return { success: false, error: 'Грешка при парсване на банково извлечение' };
+    }
+  },
+
+  async getBankTransactions(): Promise<ApiResponse<BankStatementParseResult>> {
+    if (DEMO_MODE) {
+      return { 
+        success: true, 
+        data: {
+          transactions: [],
+          count: 0,
+          totalDebit: 0,
+          totalCredit: 0,
+        }
+      };
+    }
+
+    try {
+      const response = await api.get(
+        buildApiUrl(API_CONFIG.ENDPOINTS.GET_BANK_TRANSACTIONS)
+      );
+      
+      console.log('Get Bank Transactions response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Get Bank Transactions error:', error);
+      return { success: false, error: 'Грешка при зареждане на банкови транзакции' };
+    }
+  },
+
+  async saveBankTransactions(transactions: BankTransaction[]): Promise<ApiResponse<{ insertedCount: number; duplicateCount: number }>> {
+    if (DEMO_MODE) {
+      return { success: true, data: { insertedCount: transactions.length, duplicateCount: 0 } };
+    }
+
+    try {
+      const response = await api.post(
+        buildApiUrl(API_CONFIG.ENDPOINTS.SAVE_BANK_TRANSACTIONS),
+        { transactions }
+      );
+      
+      console.log('Save Bank Transactions response from n8n:', response.data);
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Save Bank Transactions error:', error);
+      return { success: false, error: 'Грешка при запазване на банкови транзакции' };
+    }
+  },
+
+  async updateBankTransaction(id: number, data: { objectId?: number | null; objectName?: string; status?: string }): Promise<ApiResponse<BankTransaction>> {
+    if (DEMO_MODE) {
+      return { success: true };
+    }
+
+    try {
+      const response = await api.put(
+        `${buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_BANK_TRANSACTION)}/${id}`,
+        data
+      );
+      
+      console.log('Update Bank Transaction response from n8n:', response.data);
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Update Bank Transaction error:', error);
+      return { success: false, error: 'Грешка при обновяване на банкова транзакция' };
     }
   },
 

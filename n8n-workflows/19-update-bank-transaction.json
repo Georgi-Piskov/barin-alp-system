@@ -1,0 +1,212 @@
+{
+  "name": "BARIN-ALP: Update Bank Transaction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "barin-alp/bank-transactions/:id",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-alp-bank-transaction-update"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get transaction ID from path and data from body\nconst params = $input.item.json.params;\nconst body = $input.item.json.body;\n\nconst transactionId = parseInt(params.id);\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\n\nif (!transactionId) {\n  return [{ json: { success: false, error: 'Transaction ID is required' } }];\n}\n\nreturn [{ \n  json: { \n    transactionId,\n    objectId: objectId || '',\n    objectName,\n    status\n  } \n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BankTransactions",
+          "mode": "list",
+          "cachedResultName": "BankTransactions"
+        },
+        "options": {}
+      },
+      "id": "readSheet",
+      "name": "Read Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [650, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find the transaction to update\nconst allTransactions = $('Read Transactions').all();\nconst updateData = $('Prepare Update').first().json;\n\n// Find the row number (1-indexed, +1 for header)\nlet rowNumber = -1;\nlet foundTransaction = null;\n\nfor (let i = 0; i < allTransactions.length; i++) {\n  const tx = allTransactions[i].json;\n  if (parseInt(tx.id) === updateData.transactionId) {\n    rowNumber = i + 2; // +1 for 0-index, +1 for header\n    foundTransaction = tx;\n    break;\n  }\n}\n\nif (rowNumber === -1) {\n  return [{ json: { success: false, error: 'Transaction not found', notFound: true } }];\n}\n\n// Return update info\nreturn [{\n  json: {\n    rowNumber,\n    transactionId: updateData.transactionId,\n    objectId: updateData.objectId,\n    objectName: updateData.objectName,\n    status: updateData.status,\n    existingData: foundTransaction\n  }\n}];"
+      },
+      "id": "findRow",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "found-check",
+              "leftValue": "={{ $json.notFound }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ifFound",
+      "name": "Transaction Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BankTransactions",
+          "mode": "list",
+          "cachedResultName": "BankTransactions"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.transactionId }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "status": "={{ $json.status }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "updateRow",
+      "name": "Update Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1250, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const updateData = $('Find Row').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: `Транзакция ${updateData.transactionId} е обновена успешно.`,\n    transactionId: updateData.transactionId,\n    objectId: updateData.objectId,\n    objectName: updateData.objectName,\n    status: updateData.status\n  }\n}];"
+      },
+      "id": "successResponse",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respondNotFound",
+      "name": "Respond Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Prepare Update", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Update": {
+      "main": [
+        [{ "node": "Read Transactions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Transactions": {
+      "main": [
+        [{ "node": "Find Row", "type": "main", "index": 0 }]
+      ]
+    },
+    "Find Row": {
+      "main": [
+        [{ "node": "Transaction Found?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Transaction Found?": {
+      "main": [
+        [{ "node": "Update Row", "type": "main", "index": 0 }],
+        [{ "node": "Respond Not Found", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Row": {
+      "main": [
+        [{ "node": "Success Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Success Response": {
+      "main": [
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

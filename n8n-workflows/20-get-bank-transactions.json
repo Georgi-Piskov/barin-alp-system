@@ -1,0 +1,91 @@
+{
+  "name": "BARIN-ALP: Get Bank Transactions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "barin-alp/bank-transactions",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-alp-bank-transactions-get"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BankTransactions",
+          "mode": "list",
+          "cachedResultName": "BankTransactions"
+        },
+        "options": {}
+      },
+      "id": "readSheet",
+      "name": "Read Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [450, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all transactions and calculate stats\nconst items = $input.all();\n\nconst transactions = items.map(item => ({\n  id: parseInt(item.json.id) || 0,\n  reference: item.json.reference || '',\n  date: item.json.date || '',\n  type: item.json.type || 'debit',\n  amount: parseFloat(item.json.amount) || 0,\n  currency: item.json.currency || 'BGN',\n  category: item.json.category || 'other',\n  description: item.json.description || '',\n  displayName: item.json.displayName || '',\n  counterpartyName: item.json.counterpartyName || '',\n  invoiceRef: item.json.invoiceRef || '',\n  purpose: item.json.purpose || '',\n  objectId: item.json.objectId ? parseInt(item.json.objectId) : null,\n  objectName: item.json.objectName || '',\n  isCompanyExpense: item.json.isCompanyExpense === 'TRUE',\n  status: item.json.status || 'unmatched',\n  importDate: item.json.importDate || ''\n}));\n\n// Sort by date descending\ntransactions.sort((a, b) => b.date.localeCompare(a.date));\n\n// Calculate stats\nconst totalDebit = transactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst totalCredit = transactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);\nconst cashWithdrawalTotal = transactions.filter(t => t.category === 'cash_withdrawal' && t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst bankFeesTotal = transactions.filter(t => t.category === 'bank_fees' && t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst loanPaymentsTotal = transactions.filter(t => t.category === 'loan_payment' && t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst netChange = totalCredit - totalDebit;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      transactions,\n      count: transactions.length,\n      totalDebit: Math.round(totalDebit * 100) / 100,\n      totalCredit: Math.round(totalCredit * 100) / 100,\n      cashWithdrawalTotal: Math.round(cashWithdrawalTotal * 100) / 100,\n      bankFeesTotal: Math.round(bankFeesTotal * 100) / 100,\n      loanPaymentsTotal: Math.round(loanPaymentsTotal * 100) / 100,\n      netChange: Math.round(netChange * 100) / 100\n    }\n  }\n}];"
+      },
+      "id": "formatResponse",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Read Transactions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Read Transactions": {
+      "main": [
+        [{ "node": "Format Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
