@@ -46,6 +46,16 @@
     },
     {
       "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\nreturn [{ json: { transactions: items } }];"
+      },
+      "id": "wrap-transactions",
+      "name": "Wrap Transactions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
         "operation": "read",
         "documentId": {
           "__rl": true,
@@ -70,6 +80,16 @@
           "name": "Google Sheets"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\nreturn [{ json: { invoices: items } }];"
+      },
+      "id": "wrap-invoices",
+      "name": "Wrap Invoices",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 350]
     },
     {
       "parameters": {
@@ -100,6 +120,16 @@
     },
     {
       "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\nreturn [{ json: { objects: items } }];"
+      },
+      "id": "wrap-objects",
+      "name": "Wrap Objects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
         "operation": "read",
         "documentId": {
           "__rl": true,
@@ -127,25 +157,59 @@
     },
     {
       "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\nreturn [{ json: { users: items } }];"
+      },
+      "id": "wrap-users",
+      "name": "Wrap Users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 650]
+    },
+    {
+      "parameters": {
         "mode": "combine",
         "combineBy": "combineAll",
         "options": {}
       },
-      "id": "merge",
-      "name": "Merge",
+      "id": "merge1",
+      "name": "Merge 1",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [700, 350]
+      "position": [850, 275]
     },
     {
       "parameters": {
-        "jsCode": "// Get all data from different sheets\nconst allItems = $input.all();\n\n// Since we merged all, we need to separate by source\n// Each input comes from different sheet, so let's use a workaround\n// We'll fetch from the original nodes\n\nconst transactions = $('Get Transactions').all().map(i => i.json);\nconst invoices = $('Get Invoices').all().map(i => i.json);\nconst objects = $('Get Objects').all().map(i => i.json);\nconst users = $('Get Users').all().map(i => i.json);\n\n// Calculate technician balances\nconst technicianBalances = {};\n\nusers.forEach(user => {\n  if (user.role === 'technician') {\n    technicianBalances[user.id] = {\n      userId: parseInt(user.id),\n      userName: user.name,\n      income: 0,\n      expense: 0,\n      balance: 0\n    };\n  }\n});\n\n// Process transactions\ntransactions.forEach(t => {\n  const userId = String(t.userId);\n  const amount = parseFloat(t.amount) || 0;\n  \n  if (technicianBalances[userId]) {\n    if (t.type === 'income') {\n      technicianBalances[userId].income += amount;\n    } else if (t.type === 'expense') {\n      technicianBalances[userId].expense += amount;\n    }\n  }\n});\n\n// Also count expenses from invoices (created by technicians)\ninvoices.forEach(inv => {\n  const userId = String(inv.createdBy);\n  const amount = parseFloat(inv.total) || 0;\n  \n  if (technicianBalances[userId]) {\n    technicianBalances[userId].expense += amount;\n  }\n});\n\n// Calculate final balances\nObject.values(technicianBalances).forEach(tb => {\n  tb.balance = tb.income - tb.expense;\n});\n\n// Calculate expenses by object\nconst expensesByObject = {};\nlet unassignedExpenses = 0;\n\ninvoices.forEach(inv => {\n  const amount = parseFloat(inv.total) || 0;\n  const objectId = inv.objectId;\n  const objectName = inv.objectName;\n  \n  if (objectId && objectName) {\n    if (!expensesByObject[objectId]) {\n      expensesByObject[objectId] = {\n        objectId: parseInt(objectId),\n        objectName: objectName,\n        totalExpenses: 0,\n        invoiceCount: 0\n      };\n    }\n    expensesByObject[objectId].totalExpenses += amount;\n    expensesByObject[objectId].invoiceCount += 1;\n  } else {\n    unassignedExpenses += amount;\n  }\n});\n\n// Total calculations\nconst totalIncome = transactions\n  .filter(t => t.type === 'income')\n  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);\n\nconst totalExpenses = invoices\n  .reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);\n\nconst activeObjects = objects.filter(o => o.STATUS === 'active').length;\n\nconst dashboardStats = {\n  // Overview\n  totalIncome,\n  totalExpenses,\n  netBalance: totalIncome - totalExpenses,\n  unassignedExpenses,\n  \n  // Counts\n  totalObjects: objects.length,\n  activeObjects,\n  totalInvoices: invoices.length,\n  totalTransactions: transactions.length,\n  \n  // Detailed data\n  technicianBalances: Object.values(technicianBalances),\n  expensesByObject: Object.values(expensesByObject).sort((a, b) => b.totalExpenses - a.totalExpenses),\n  \n  // Recent transactions (last 10)\n  recentTransactions: transactions.slice(0, 10),\n  \n  // Recent invoices (last 10)\n  recentInvoices: invoices.slice(0, 10)\n};\n\nreturn [{ json: { success: true, data: dashboardStats } }];"
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge2",
+      "name": "Merge 2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [850, 575]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge-final",
+      "name": "Merge Final",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1050, 425]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get merged data - now everything is in one object\nconst data = $input.first().json;\n\nconst transactions = data.transactions || [];\nconst invoices = data.invoices || [];\nconst objects = data.objects || [];\nconst users = data.users || [];\n\n// Calculate technician balances\nconst technicianBalances = {};\n\nusers.forEach(user => {\n  if (user.role === 'technician') {\n    technicianBalances[user.id] = {\n      userId: parseInt(user.id) || 0,\n      userName: user.name || 'Unknown',\n      income: 0,\n      expense: 0,\n      balance: 0\n    };\n  }\n});\n\n// Process transactions\ntransactions.forEach(t => {\n  const userId = String(t.userId);\n  const amount = parseFloat(t.amount) || 0;\n  \n  if (technicianBalances[userId]) {\n    if (t.type === 'income') {\n      technicianBalances[userId].income += amount;\n    } else if (t.type === 'expense') {\n      technicianBalances[userId].expense += amount;\n    }\n  }\n});\n\n// Also count expenses from invoices (created by technicians)\ninvoices.forEach(inv => {\n  const userId = String(inv.createdBy);\n  const amount = parseFloat(inv.total) || 0;\n  \n  if (technicianBalances[userId]) {\n    technicianBalances[userId].expense += amount;\n  }\n});\n\n// Calculate final balances\nObject.values(technicianBalances).forEach(tb => {\n  tb.balance = tb.income - tb.expense;\n});\n\n// Calculate expenses by object\nconst expensesByObject = {};\nlet unassignedExpenses = 0;\n\ninvoices.forEach(inv => {\n  const amount = parseFloat(inv.total) || 0;\n  const objectId = inv.objectId;\n  const objectName = inv.objectName;\n  \n  if (objectId && objectName) {\n    if (!expensesByObject[objectId]) {\n      expensesByObject[objectId] = {\n        objectId: parseInt(objectId) || 0,\n        objectName: objectName,\n        totalExpenses: 0,\n        invoiceCount: 0\n      };\n    }\n    expensesByObject[objectId].totalExpenses += amount;\n    expensesByObject[objectId].invoiceCount += 1;\n  } else {\n    unassignedExpenses += amount;\n  }\n});\n\n// Total calculations\nconst totalIncome = transactions\n  .filter(t => t.type === 'income')\n  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);\n\nconst totalExpenses = invoices\n  .reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);\n\nconst activeObjects = objects.filter(o => o.STATUS === 'active').length;\n\nconst dashboardStats = {\n  totalIncome,\n  totalExpenses,\n  netBalance: totalIncome - totalExpenses,\n  unassignedExpenses,\n  totalObjects: objects.length,\n  activeObjects,\n  totalInvoices: invoices.length,\n  totalTransactions: transactions.length,\n  technicianBalances: Object.values(technicianBalances),\n  expensesByObject: Object.values(expensesByObject).sort((a, b) => b.totalExpenses - a.totalExpenses),\n  recentTransactions: transactions.slice(0, 10),\n  recentInvoices: invoices.slice(0, 10)\n};\n\nreturn [{ json: { success: true, data: dashboardStats } }];"
       },
       "id": "calculate-stats",
       "name": "Calculate Stats",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 350]
+      "position": [1250, 425]
     },
     {
       "parameters": {
@@ -157,7 +221,7 @@
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1100, 350]
+      "position": [1450, 425]
     }
   ],
   "connections": {
@@ -173,25 +237,55 @@
     },
     "Get Transactions": {
       "main": [
-        [{ "node": "Merge", "type": "main", "index": 0 }]
+        [{ "node": "Wrap Transactions", "type": "main", "index": 0 }]
       ]
     },
     "Get Invoices": {
       "main": [
-        [{ "node": "Merge", "type": "main", "index": 1 }]
+        [{ "node": "Wrap Invoices", "type": "main", "index": 0 }]
       ]
     },
     "Get Objects": {
       "main": [
-        [{ "node": "Merge", "type": "main", "index": 0 }]
+        [{ "node": "Wrap Objects", "type": "main", "index": 0 }]
       ]
     },
     "Get Users": {
       "main": [
-        [{ "node": "Merge", "type": "main", "index": 1 }]
+        [{ "node": "Wrap Users", "type": "main", "index": 0 }]
       ]
     },
-    "Merge": {
+    "Wrap Transactions": {
+      "main": [
+        [{ "node": "Merge 1", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wrap Invoices": {
+      "main": [
+        [{ "node": "Merge 1", "type": "main", "index": 1 }]
+      ]
+    },
+    "Wrap Objects": {
+      "main": [
+        [{ "node": "Merge 2", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wrap Users": {
+      "main": [
+        [{ "node": "Merge 2", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge 1": {
+      "main": [
+        [{ "node": "Merge Final", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge 2": {
+      "main": [
+        [{ "node": "Merge Final", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge Final": {
       "main": [
         [{ "node": "Calculate Stats", "type": "main", "index": 0 }]
       ]
