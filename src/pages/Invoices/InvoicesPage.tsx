@@ -27,9 +27,10 @@ const getInvoiceItems = (invoice: Invoice): { name: string; unit: string; quanti
   }
   
   // Check if items is a string that needs parsing
-  if (typeof invoice.items === 'string' && invoice.items.startsWith('[')) {
+  const itemsStr = invoice.items as unknown;
+  if (typeof itemsStr === 'string' && itemsStr.startsWith('[')) {
     try {
-      return JSON.parse(invoice.items);
+      return JSON.parse(itemsStr);
     } catch {
       // Continue to check other fields
     }
