@@ -578,7 +578,7 @@ export const apiService = {
   },
 
   // ==================== BANK STATEMENTS ====================
-  async parseBankStatement(pdfBase64: string): Promise<ApiResponse<BankStatementParseResult>> {
+  async parseBankStatement(csvContent: string): Promise<ApiResponse<BankStatementParseResult>> {
     if (DEMO_MODE) {
       return { 
         success: true, 
@@ -594,7 +594,7 @@ export const apiService = {
     try {
       const response = await api.post(
         buildApiUrl(API_CONFIG.ENDPOINTS.PARSE_BANK_STATEMENT),
-        { pdf: pdfBase64 }
+        { csv: csvContent }
       );
       
       console.log('Parse Bank Statement response from n8n:', response.data);

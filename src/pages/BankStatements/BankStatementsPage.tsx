@@ -43,11 +43,11 @@ export const BankStatementsPage = () => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
+    if (file && (file.type === 'text/csv' || file.name.endsWith('.csv'))) {
       setSelectedFile(file);
       setError(null);
     } else {
-      setError('Моля, изберете PDF файл');
+      setError('Моля, изберете CSV файл');
       setSelectedFile(null);
     }
   };
@@ -59,24 +59,22 @@ export const BankStatementsPage = () => {
     setError(null);
 
     try {
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
+      // Read CSV file as text with Windows-1251 encoding
+      const csvText = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-          const result = reader.result as string;
-          // Remove data:application/pdf;base64, prefix
-          const base64Data = result.split(',')[1];
-          resolve(base64Data);
+          resolve(reader.result as string);
         };
         reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
+        // Try to read as Windows-1251 (Bulgarian encoding)
+        reader.readAsText(selectedFile, 'windows-1251');
       });
 
       // Load invoices for matching
       await loadInvoices();
 
-      // Parse PDF
-      const response = await apiService.parseBankStatement(base64);
+      // Parse CSV
+      const response = await apiService.parseBankStatement(csvText);
       
       if (response.success && response.data) {
         setTransactions(response.data.transactions || []);
@@ -136,7 +134,7 @@ export const BankStatementsPage = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Банкови извлечения</h1>
-        <p className="text-gray-500">Качете PDF от Asset Bank за анализ и съпоставяне</p>
+        <p className="text-gray-500">Качете CSV от Asset Bank за анализ и съпоставяне</p>
       </div>
 
       {/* Upload Section */}
@@ -153,7 +151,7 @@ export const BankStatementsPage = () => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf"
+              accept=".csv,text/csv"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -169,7 +167,7 @@ export const BankStatementsPage = () => {
             ) : (
               <>
                 <FileUp className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p className="font-medium text-gray-900">Изберете PDF файл</p>
+                <p className="font-medium text-gray-900">Изберете CSV файл</p>
                 <p className="text-sm text-gray-500 mt-1">
                   Кликнете или провлачете файл тук
                 </p>
