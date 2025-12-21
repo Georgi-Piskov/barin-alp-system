@@ -413,12 +413,27 @@ export const apiService = {
       );
       
       console.log('Upload Photo response from n8n:', response.data);
+      console.log('Upload Photo response.data.success:', response.data?.success);
+      console.log('Upload Photo response.data.data:', response.data?.data);
+      console.log('Upload Photo response.data.data?.url:', response.data?.data?.url);
       
-      if (response.data?.success && response.data?.data) {
+      // Handle different response formats from n8n
+      if (response.data?.success && response.data?.data?.url) {
         return { success: true, data: response.data.data };
       }
       
-      return { success: true, data: response.data };
+      // Sometimes n8n returns data directly without wrapper
+      if (response.data?.url) {
+        return { success: true, data: { url: response.data.url, fileId: response.data.fileId || '' } };
+      }
+      
+      // Try to extract from nested structure
+      if (response.data?.data?.url) {
+        return { success: true, data: response.data.data };
+      }
+      
+      console.warn('Could not extract URL from response:', JSON.stringify(response.data));
+      return { success: false, error: 'No URL in response' };
     } catch (error) {
       console.error('Upload Photo error:', error);
       return { success: false, error: 'Грешка при качване на снимка' };
