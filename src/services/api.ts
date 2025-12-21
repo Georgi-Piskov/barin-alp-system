@@ -219,13 +219,30 @@ export const apiService = {
       
       console.log('Get Invoices response from n8n:', response.data);
       
+      // Parse items from JSON string if needed
+      const parseInvoiceItems = (invoice: Invoice): Invoice => {
+        if (typeof invoice.items === 'string') {
+          try {
+            invoice.items = JSON.parse(invoice.items);
+          } catch {
+            invoice.items = [];
+          }
+        }
+        if (!Array.isArray(invoice.items)) {
+          invoice.items = [];
+        }
+        return invoice;
+      };
+      
       // n8n returns { data: [...] } format
       if (response.data?.data && Array.isArray(response.data.data)) {
-        return { success: true, data: response.data.data };
+        const invoices = response.data.data.map(parseInvoiceItems);
+        return { success: true, data: invoices };
       }
       
       if (Array.isArray(response.data)) {
-        return { success: true, data: response.data };
+        const invoices = response.data.map(parseInvoiceItems);
+        return { success: true, data: invoices };
       }
       
       return { success: true, data: [] };
