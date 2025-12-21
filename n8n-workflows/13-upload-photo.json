@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body;\n\n// Extract base64 data\nlet base64Data = body.photo;\nlet fileName = body.fileName || `photo_${Date.now()}.jpg`;\nlet mimeType = 'image/jpeg';\n\n// Handle data URL format (data:image/jpeg;base64,...)\nif (base64Data.startsWith('data:')) {\n  const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);\n  if (matches) {\n    mimeType = matches[1];\n    base64Data = matches[2];\n    \n    // Set correct extension based on mime type\n    const ext = mimeType.split('/')[1];\n    if (!fileName.includes('.')) {\n      fileName = `${fileName}.${ext}`;\n    }\n  }\n}\n\n// Convert base64 to binary\nconst binaryData = Buffer.from(base64Data, 'base64');\n\nreturn [{\n  json: {\n    fileName: fileName,\n    mimeType: mimeType,\n    itemId: body.itemId,\n    itemName: body.itemName\n  },\n  binary: {\n    photo: {\n      data: binaryData.toString('base64'),\n      mimeType: mimeType,\n      fileName: fileName\n    }\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body;\n\n// Extract base64 data\nlet base64Data = body.photo;\nlet fileName = body.fileName || `photo_${Date.now()}.jpg`;\nlet mimeType = 'image/jpeg';\n\n// Handle data URL format (data:image/jpeg;base64,...)\nif (base64Data.startsWith('data:')) {\n  const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);\n  if (matches) {\n    mimeType = matches[1];\n    base64Data = matches[2];\n    \n    // Set correct extension based on mime type\n    const ext = mimeType.split('/')[1];\n    if (!fileName.includes('.')) {\n      fileName = `${fileName}.${ext}`;\n    }\n  }\n}\n\n// Return with binary data in 'data' field (required by Google Drive node)\nreturn [{\n  json: {\n    fileName: fileName,\n    mimeType: mimeType,\n    itemId: body.itemId,\n    itemName: body.itemName\n  },\n  binary: {\n    data: {\n      data: base64Data,\n      mimeType: mimeType,\n      fileName: fileName\n    }\n  }\n}];"
       },
       "id": "code-prepare-file",
       "name": "Prepare File",
@@ -37,9 +37,8 @@
           "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
           "mode": "id"
         },
-        "options": {
-          "fields": ["id", "name", "webViewLink", "webContentLink"]
-        }
+        "inputDataFieldName": "data",
+        "options": {}
       },
       "id": "drive-upload",
       "name": "Upload to Drive",
@@ -77,7 +76,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const driveFile = $('Upload to Drive').first().json;\nconst inputData = $('Prepare File').first().json;\n\n// Create direct link to the image\n// Format: https://drive.google.com/uc?id=FILE_ID\nconst directUrl = `https://drive.google.com/uc?id=${driveFile.id}`;\nconst viewUrl = driveFile.webViewLink;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      fileId: driveFile.id,\n      fileName: driveFile.name,\n      url: directUrl,\n      viewUrl: viewUrl,\n      itemId: inputData.itemId,\n      itemName: inputData.itemName\n    }\n  }\n}];"
+        "jsCode": "const driveFile = $('Upload to Drive').first().json;\nconst inputData = $('Prepare File').first().json;\n\n// Create direct link to the image\nconst directUrl = `https://drive.google.com/uc?export=view&id=${driveFile.id}`;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      fileId: driveFile.id,\n      fileName: driveFile.name,\n      url: directUrl,\n      itemId: inputData.itemId,\n      itemName: inputData.itemName\n    }\n  }\n}];"
       },
       "id": "code-format-response",
       "name": "Format Response",
@@ -153,9 +152,11 @@
       ]
     }
   },
+  "pinData": {},
   "settings": {
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": []
+  "tags": [],
+  "triggerCount": 0
 }
