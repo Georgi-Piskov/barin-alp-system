@@ -60,8 +60,11 @@
 | date | Date | 2024-12-18 |
 | description | Text | Плащане от клиент |
 | createdBy | Number | 1 |
+| createdByName | Text | Георги Директор |
 | objectId | Number | 1 |
 | objectName | Text | бул. Витошка 10 |
+| method | Text | cash / bank |
+| invoiceId | Number | 1 (optional, links to invoice) |
 
 ---
 

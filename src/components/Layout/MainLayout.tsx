@@ -10,15 +10,24 @@ import {
   Menu,
   X,
   User,
+  Landmark,
 } from 'lucide-react';
 import { useState } from 'react';
 
-const navItems = [
+interface NavItem {
+  to: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  directorOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Табло' },
   { to: '/objects', icon: Building2, label: 'Обекти' },
   { to: '/invoices', icon: FileText, label: 'Фактури' },
   { to: '/inventory', icon: Package, label: 'Инвентар' },
   { to: '/transactions', icon: Receipt, label: 'Транзакции' },
+  { to: '/bank-statements', icon: Landmark, label: 'Банка', directorOnly: true },
 ];
 
 export const MainLayout = () => {
@@ -76,7 +85,9 @@ export const MainLayout = () => {
 
         {/* Navigation */}
         <nav className="p-3 space-y-1">
-          {navItems.map((item) => (
+          {navItems
+            .filter((item) => !item.directorOnly || user?.role === 'director')
+            .map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -42,6 +42,12 @@ export const API_CONFIG = {
     CREATE_TRANSACTION: '/barin-alp/transactions/create',
     UPDATE_TRANSACTION: '/barin-alp/transactions/update',
     DELETE_TRANSACTION: '/barin-alp/transactions/delete',
+    
+    // Dashboard
+    GET_DASHBOARD: '/barin-alp/dashboard',
+    
+    // Bank Statements
+    PARSE_BANK_STATEMENT: '/barin-alp/bank-statement',
   }
 };
 

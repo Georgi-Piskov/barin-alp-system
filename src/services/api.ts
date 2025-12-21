@@ -7,6 +7,8 @@ import {
   InventoryItem,
   Transaction,
   ApiResponse,
+  DashboardStats,
+  BankStatementParseResult,
 } from '../types';
 
 // Create axios instance
@@ -482,18 +484,31 @@ export const apiService = {
   },
 
   // ==================== TRANSACTIONS ====================
-  async getTransactions(objectId?: number): Promise<ApiResponse<Transaction[]>> {
+  async getTransactions(filters?: { userId?: number; objectId?: number; type?: string }): Promise<ApiResponse<Transaction[]>> {
     if (DEMO_MODE) {
       return { success: true, data: [] };
     }
 
     try {
       const response = await api.get(buildApiUrl(API_CONFIG.ENDPOINTS.GET_TRANSACTIONS), {
-        params: { objectId },
+        params: filters,
       });
-      return { success: true, data: response.data };
+      
+      console.log('Get Transactions response from n8n:', response.data);
+      
+      // n8n returns { data: [...] } format
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        return { success: true, data: response.data.data };
+      }
+      
+      if (Array.isArray(response.data)) {
+        return { success: true, data: response.data };
+      }
+      
+      return { success: true, data: [] };
     } catch (error) {
-      return { success: false, error: 'Грешка при зареждане на транзакции' };
+      console.error('Get Transactions error:', error);
+      return { success: false, error: 'Грешка при зареждане на транзакции', data: [] };
     }
   },
 
@@ -508,9 +523,90 @@ export const apiService = {
         buildApiUrl(API_CONFIG.ENDPOINTS.CREATE_TRANSACTION),
         transaction
       );
+      
+      console.log('Create Transaction response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('Create Transaction error:', error);
       return { success: false, error: 'Грешка при създаване на транзакция' };
+    }
+  },
+
+  // ==================== DASHBOARD ====================
+  async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
+    if (DEMO_MODE) {
+      return { 
+        success: true, 
+        data: {
+          totalIncome: 0,
+          totalExpenses: 0,
+          netBalance: 0,
+          unassignedExpenses: 0,
+          totalObjects: 0,
+          activeObjects: 0,
+          totalInvoices: 0,
+          totalTransactions: 0,
+          technicianBalances: [],
+          expensesByObject: [],
+        }
+      };
+    }
+
+    try {
+      const response = await api.get(buildApiUrl(API_CONFIG.ENDPOINTS.GET_DASHBOARD));
+      
+      console.log('Get Dashboard response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      if (response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Get Dashboard error:', error);
+      return { success: false, error: 'Грешка при зареждане на dashboard' };
+    }
+  },
+
+  // ==================== BANK STATEMENTS ====================
+  async parseBankStatement(pdfBase64: string): Promise<ApiResponse<BankStatementParseResult>> {
+    if (DEMO_MODE) {
+      return { 
+        success: true, 
+        data: {
+          transactions: [],
+          count: 0,
+          totalDebit: 0,
+          totalCredit: 0,
+        }
+      };
+    }
+
+    try {
+      const response = await api.post(
+        buildApiUrl(API_CONFIG.ENDPOINTS.PARSE_BANK_STATEMENT),
+        { pdf: pdfBase64 }
+      );
+      
+      console.log('Parse Bank Statement response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Parse Bank Statement error:', error);
+      return { success: false, error: 'Грешка при парсване на банково извлечение' };
     }
   },
 

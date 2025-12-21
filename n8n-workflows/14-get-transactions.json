@@ -1,0 +1,91 @@
+{
+  "name": "BARIN-ALP: Get Transactions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "barin-alp/transactions",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-alp-transactions"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Transactions",
+          "mode": "list",
+          "cachedResultName": "Transactions"
+        },
+        "options": {}
+      },
+      "id": "sheets",
+      "name": "Get Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [450, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get query parameters\nconst userId = $('Webhook').item.json.query?.userId;\nconst technicianId = $('Webhook').item.json.query?.technicianId;\nconst objectId = $('Webhook').item.json.query?.objectId;\nconst type = $('Webhook').item.json.query?.type;\n\n// Get all transactions\nlet transactions = $input.all().map(item => item.json);\n\n// Filter by userId/technicianId if provided\nif (userId || technicianId) {\n  const filterUserId = userId || technicianId;\n  transactions = transactions.filter(t => \n    String(t.userId) === String(filterUserId)\n  );\n}\n\n// Filter by objectId if provided\nif (objectId) {\n  transactions = transactions.filter(t => \n    String(t.objectId) === String(objectId)\n  );\n}\n\n// Filter by type if provided\nif (type) {\n  transactions = transactions.filter(t => \n    t.type === type\n  );\n}\n\n// Sort by date descending (newest first)\ntransactions.sort((a, b) => {\n  const dateA = new Date(a.date || 0);\n  const dateB = new Date(b.date || 0);\n  return dateB - dateA;\n});\n\nreturn [{ json: { data: transactions } }];"
+      },
+      "id": "code",
+      "name": "Filter & Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Get Transactions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Transactions": {
+      "main": [
+        [{ "node": "Filter & Format", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter & Format": {
+      "main": [
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

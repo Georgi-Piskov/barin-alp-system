@@ -1,0 +1,90 @@
+{
+  "name": "BARIN-ALP: Parse Bank Statement PDF",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/bank-statement",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-alp-bank-statement"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the PDF content (base64)\nconst body = $input.item.json.body;\nconst pdfBase64 = body.pdf;\n\nif (!pdfBase64) {\n  return [{ json: { success: false, error: 'No PDF provided' } }];\n}\n\n// Return the base64 for extraction\nreturn [{ json: { pdfBase64 } }];"
+      },
+      "id": "prepare",
+      "name": "Prepare PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "sourceProperty": "pdfBase64",
+        "options": {}
+      },
+      "id": "extract",
+      "name": "Extract from PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Asset Bank PDF format\n// Expected format: DD.MM.YYYY | Reference | Description | BGN | Amount | Balance\n\nconst text = $input.item.json.data || $input.item.json.text || '';\nconst lines = text.split('\\n');\n\nconst transactions = [];\n\n// Regex for Asset Bank format\n// Date: DD.MM.YYYY\n// Amount can be positive (credit) or negative (debit)\nconst dateRegex = /^(\\d{2}\\.\\d{2}\\.\\d{4})/;\nconst amountRegex = /([\\d\\s]+[,.]\\d{2})\\s*$/;\n\nlet currentTransaction = null;\n\nfor (const line of lines) {\n  const trimmedLine = line.trim();\n  if (!trimmedLine) continue;\n  \n  // Check if line starts with a date\n  const dateMatch = trimmedLine.match(dateRegex);\n  \n  if (dateMatch) {\n    // Save previous transaction if exists\n    if (currentTransaction) {\n      transactions.push(currentTransaction);\n    }\n    \n    // Parse date (convert DD.MM.YYYY to YYYY-MM-DD)\n    const dateParts = dateMatch[1].split('.');\n    const isoDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;\n    \n    // Extract reference (usually 7 digits after date)\n    const refMatch = trimmedLine.match(/\\d{2}\\.\\d{2}\\.\\d{4}\\s+(\\d{7})/);\n    const reference = refMatch ? refMatch[1] : '';\n    \n    // Extract description (text between reference and BGN)\n    let description = '';\n    const descMatch = trimmedLine.match(/\\d{7}\\s+(.+?)\\s+BGN/);\n    if (descMatch) {\n      description = descMatch[1].trim();\n    }\n    \n    // Extract amounts (debit/credit and balance)\n    const amounts = trimmedLine.match(/BGN\\s+([\\d\\s,.-]+)\\s+([\\d\\s,.-]+)$/);\n    let amount = 0;\n    let balance = 0;\n    let type = 'debit';\n    \n    if (amounts) {\n      // Parse amount (remove spaces, convert comma to dot)\n      const amountStr = amounts[1].replace(/\\s/g, '').replace(',', '.');\n      amount = parseFloat(amountStr) || 0;\n      \n      // If amount is negative, it's a debit (expense)\n      // If positive, it's a credit (income)\n      type = amount < 0 ? 'debit' : 'credit';\n      amount = Math.abs(amount);\n      \n      const balanceStr = amounts[2].replace(/\\s/g, '').replace(',', '.');\n      balance = parseFloat(balanceStr) || 0;\n    }\n    \n    currentTransaction = {\n      date: isoDate,\n      reference,\n      description,\n      type,\n      amount,\n      balance,\n      currency: 'BGN',\n      status: 'unmatched'\n    };\n  } else if (currentTransaction && trimmedLine.length > 3) {\n    // Continuation of description\n    currentTransaction.description += ' ' + trimmedLine;\n  }\n}\n\n// Don't forget the last transaction\nif (currentTransaction) {\n  transactions.push(currentTransaction);\n}\n\n// Clean up descriptions\ntransactions.forEach(t => {\n  t.description = t.description.replace(/\\s+/g, ' ').trim();\n});\n\nreturn [{ \n  json: { \n    success: true, \n    data: {\n      transactions,\n      count: transactions.length,\n      totalDebit: transactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0),\n      totalCredit: transactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0)\n    }\n  } \n}];"
+      },
+      "id": "parse",
+      "name": "Parse Bank Transactions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Prepare PDF", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare PDF": {
+      "main": [
+        [{ "node": "Extract from PDF", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract from PDF": {
+      "main": [
+        [{ "node": "Parse Bank Transactions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Bank Transactions": {
+      "main": [
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

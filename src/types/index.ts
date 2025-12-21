@@ -62,6 +62,7 @@ export interface InventoryItem {
 
 // Transaction types
 export type TransactionType = 'income' | 'expense';
+export type PaymentMethod = 'cash' | 'bank';
 
 export interface Transaction {
   id: number;
@@ -72,8 +73,28 @@ export interface Transaction {
   date: string;
   description: string;
   createdBy: number;
+  createdByName?: string;
   objectId?: number | null;
   objectName?: string | null;
+  method?: PaymentMethod;
+  invoiceId?: number | null;
+}
+
+// Technician Balance
+export interface TechnicianBalance {
+  userId: number;
+  userName: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
+// Expenses by Object
+export interface ObjectExpenses {
+  objectId: number;
+  objectName: string;
+  totalExpenses: number;
+  invoiceCount: number;
 }
 
 // API Response types
@@ -85,10 +106,45 @@ export interface ApiResponse<T> {
 
 // Dashboard stats
 export interface DashboardStats {
-  totalObjects: number;
-  activeObjects: number;
+  // Overview
   totalIncome: number;
   totalExpenses: number;
+  netBalance: number;
   unassignedExpenses: number;
-  inventoryCount: number;
+  
+  // Counts
+  totalObjects: number;
+  activeObjects: number;
+  totalInvoices: number;
+  totalTransactions: number;
+  inventoryCount?: number;
+  
+  // Detailed data
+  technicianBalances: TechnicianBalance[];
+  expensesByObject: ObjectExpenses[];
+  
+  // Recent data
+  recentTransactions?: Transaction[];
+  recentInvoices?: Invoice[];
+}
+
+// Bank Transaction types
+export interface BankTransaction {
+  id?: number;
+  date: string;
+  reference: string;
+  description: string;
+  type: 'debit' | 'credit';
+  amount: number;
+  balance: number;
+  currency: string;
+  status: 'matched' | 'unmatched';
+  matchedInvoiceId?: number;
+}
+
+export interface BankStatementParseResult {
+  transactions: BankTransaction[];
+  count: number;
+  totalDebit: number;
+  totalCredit: number;
 }

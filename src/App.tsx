@@ -5,6 +5,7 @@ import { ObjectsPage, ObjectDetailPage } from './pages/Objects';
 import { InvoicesPage } from './pages/Invoices';
 import { InventoryPage } from './pages/Inventory';
 import { TransactionsPage } from './pages/Transactions';
+import { BankStatementsPage } from './pages/BankStatements';
 import { MainLayout } from './components/Layout';
 import { ProtectedRoute } from './components/Auth';
 
@@ -29,6 +30,7 @@ function App() {
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/bank-statements" element={<BankStatementsPage />} />
         </Route>
 
         {/* Redirects */}

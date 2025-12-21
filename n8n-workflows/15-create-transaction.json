@@ -1,0 +1,157 @@
+{
+  "name": "BARIN-ALP: Create Transaction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/transactions/create",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-alp-transactions-create"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Transactions",
+          "mode": "list",
+          "cachedResultName": "Transactions"
+        },
+        "options": {}
+      },
+      "id": "get-existing",
+      "name": "Get Existing",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [450, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').item.json.body;\nconst existingItems = $input.all().map(item => item.json);\n\n// Generate new ID (max existing + 1)\nconst maxId = existingItems.reduce((max, item) => {\n  const id = parseInt(item.id) || 0;\n  return id > max ? id : max;\n}, 0);\n\nconst newId = maxId + 1;\n\n// Create new transaction object\nconst newTransaction = {\n  id: newId,\n  type: body.type || 'expense',\n  userId: body.userId,\n  userName: body.userName || '',\n  amount: parseFloat(body.amount) || 0,\n  date: body.date || new Date().toISOString().split('T')[0],\n  description: body.description || '',\n  createdBy: body.createdBy,\n  createdByName: body.createdByName || '',\n  objectId: body.objectId || '',\n  objectName: body.objectName || '',\n  method: body.method || 'cash',\n  invoiceId: body.invoiceId || ''\n};\n\nreturn [{ json: newTransaction }];"
+      },
+      "id": "prepare",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Transactions",
+          "mode": "list",
+          "cachedResultName": "Transactions"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "type": "={{ $json.type }}",
+            "userId": "={{ $json.userId }}",
+            "userName": "={{ $json.userName }}",
+            "amount": "={{ $json.amount }}",
+            "date": "={{ $json.date }}",
+            "description": "={{ $json.description }}",
+            "createdBy": "={{ $json.createdBy }}",
+            "createdByName": "={{ $json.createdByName }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "method": "={{ $json.method }}",
+            "invoiceId": "={{ $json.invoiceId }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "append",
+      "name": "Append to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [850, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const transaction = $('Prepare Data').item.json;\nreturn [{ json: { success: true, data: transaction } }];"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Get Existing", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Existing": {
+      "main": [
+        [{ "node": "Prepare Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [{ "node": "Append to Sheet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Append to Sheet": {
+      "main": [
+        [{ "node": "Format Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
