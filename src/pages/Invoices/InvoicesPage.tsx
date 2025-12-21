@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
 import { Invoice, ConstructionObject } from '../../types';
@@ -19,7 +19,41 @@ import {
   Package
 } from 'lucide-react';
 import { InvoiceModal } from './InvoiceModal';
+// Helper to extract items from invoice (handles data in wrong columns)
+const getInvoiceItems = (invoice: Invoice): { name: string; unit: string; quantity: number; unitPrice: number; totalPrice: number }[] => {
+  // First check if items array is populated
+  if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
+    return invoice.items;
+  }
+  
+  // Check if items is a string that needs parsing
+  if (typeof invoice.items === 'string' && invoice.items.startsWith('[')) {
+    try {
+      return JSON.parse(invoice.items);
+    } catch {
+      // Continue to check other fields
+    }
+  }
+  
+  // Check if objectName contains JSON (data in wrong column)
+  if (invoice.objectName && typeof invoice.objectName === 'string' && invoice.objectName.startsWith('[')) {
+    try {
+      return JSON.parse(invoice.objectName);
+    } catch {
+      // Not valid JSON
+    }
+  }
+  
+  return [];
+};
 
+// Helper to get actual object name (not JSON data)
+const getObjectName = (invoice: Invoice): string | null => {
+  if (invoice.objectName && typeof invoice.objectName === 'string' && !invoice.objectName.startsWith('[')) {
+    return invoice.objectName;
+  }
+  return null;
+};
 export const InvoicesPage = () => {
   const { user } = useAuthStore();
   const isDirector = user?.role === 'director';
@@ -302,15 +336,28 @@ export const InvoicesPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredInvoices.map((invoice) => (
-                  <>
+                {filteredInvoices.map((invoice) => {
+                  const items = getInvoiceItems(invoice);
+                  const objectName = getObjectName(invoice);
+                  const hasObject = invoice.objectId || objectName;
+                  
+                  return (
+                  <React.Fragment key={invoice.id}>
                     <tr 
-                      key={invoice.id} 
-                      className={`hover:bg-gray-50 ${!invoice.objectId ? 'bg-red-50' : ''}`}
+                      className={`hover:bg-gray-50 cursor-pointer ${!hasObject ? 'bg-red-50' : ''} ${expandedId === invoice.id ? 'bg-blue-50' : ''}`}
+                      onClick={() => items.length > 0 && setExpandedId(expandedId === invoice.id ? null : invoice.id)}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
+                          {items.length > 0 ? (
+                            expandedId === invoice.id ? (
+                              <ChevronUp className="w-4 h-4 text-blue-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            )
+                          ) : (
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                          )}
                           <span className="text-sm text-gray-900">
                             {new Date(invoice.date).toLocaleDateString('bg-BG')}
                           </span>
@@ -328,10 +375,10 @@ export const InvoicesPage = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        {invoice.objectId ? (
+                        {hasObject ? (
                           <div className="flex items-center gap-2">
                             <Building2 className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-900">{invoice.objectName}</span>
+                            <span className="text-sm text-gray-900">{objectName || invoice.objectName}</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 text-red-600">
@@ -341,29 +388,21 @@ export const InvoicesPage = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {invoice.items && invoice.items.length > 0 ? (
-                          <button
-                            onClick={() => setExpandedId(expandedId === invoice.id ? null : invoice.id)}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                          >
+                        {items.length > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-lg">
                             <Package className="w-4 h-4" />
-                            <span className="text-sm font-medium">{invoice.items.length}</span>
-                            {expandedId === invoice.id ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </button>
+                            <span className="text-sm font-medium">{items.length}</span>
+                          </span>
                         ) : (
                           <span className="text-sm text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className={`text-sm font-bold ${!invoice.objectId ? 'text-red-600' : 'text-gray-900'}`}>
+                        <span className={`text-sm font-bold ${!hasObject ? 'text-red-600' : 'text-gray-900'}`}>
                           {invoice.total.toLocaleString()} €
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="relative">
                           <button
                             onClick={() => setOpenMenuId(openMenuId === invoice.id ? null : invoice.id)}
@@ -394,7 +433,7 @@ export const InvoicesPage = () => {
                       </td>
                     </tr>
                     {/* Expanded items row */}
-                    {expandedId === invoice.id && invoice.items && invoice.items.length > 0 && (
+                    {expandedId === invoice.id && items.length > 0 && (
                       <tr key={`${invoice.id}-items`} className="bg-blue-50">
                         <td colSpan={7} className="px-4 py-3">
                           <div className="ml-6">
@@ -411,13 +450,13 @@ export const InvoicesPage = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {invoice.items.map((item, idx) => (
+                                  {items.map((item, idx) => (
                                     <tr key={idx} className="border-t border-blue-100">
                                       <td className="py-1 text-gray-900">{item.name}</td>
                                       <td className="py-1 text-gray-600">{item.unit}</td>
                                       <td className="py-1 text-right text-gray-900">{item.quantity}</td>
-                                      <td className="py-1 text-right text-gray-600">{item.unitPrice.toFixed(2)} €</td>
-                                      <td className="py-1 text-right font-medium text-gray-900">{item.totalPrice.toFixed(2)} €</td>
+                                      <td className="py-1 text-right text-gray-600">{Number(item.unitPrice).toFixed(2)} €</td>
+                                      <td className="py-1 text-right font-medium text-gray-900">{Number(item.totalPrice).toFixed(2)} €</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -427,8 +466,9 @@ export const InvoicesPage = () => {
                         </td>
                       </tr>
                     )}
-                  </>
-                ))}
+                  </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
