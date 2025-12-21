@@ -27,7 +27,7 @@ interface NewTransactionModalProps {
 
 const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactionModalProps) => {
   const { user } = useAuthStore();
-  const [type, setType] = useState<'income' | 'expense'>('income');
+  const [type, setType] = useState<'income' | 'expense'>('expense');
   const [selectedUser, setSelectedUser] = useState<number>(0);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<'cash' | 'bank'>('cash');
@@ -37,17 +37,30 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !amount) return;
+    if (!amount) return;
+    
+    // For income, technician is required
+    if (type === 'income' && !selectedUser) return;
 
-    const targetUser = users.find(u => u.id === selectedUser);
-    if (!targetUser) return;
+    // Determine target user
+    let targetUserId = selectedUser;
+    let targetUserName = '';
+    
+    if (selectedUser > 0) {
+      const targetUser = users.find(u => u.id === selectedUser);
+      targetUserName = targetUser?.name || '';
+    } else {
+      // Director's own expense - use director's info
+      targetUserId = user?.id || 0;
+      targetUserName = user?.name || 'Директор';
+    }
 
     setIsSubmitting(true);
     
     await onSubmit({
       type,
-      userId: selectedUser,
-      userName: targetUser.name,
+      userId: targetUserId,
+      userName: targetUserName,
       amount: parseFloat(amount),
       date,
       description: description || `${type === 'income' ? 'Заприходяване' : 'Разход'} - ${method === 'cash' ? 'Кеш' : 'Банков превод'}`,
@@ -59,7 +72,7 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
     setIsSubmitting(false);
     
     // Reset form
-    setType('income');
+    setType('expense');
     setSelectedUser(0);
     setAmount('');
     setMethod('cash');
@@ -117,24 +130,31 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
             </div>
           </div>
 
-          {/* User Selection */}
+          {/* User Selection - Required for income, optional for expense */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Техник *
+              {type === 'income' ? 'Техник *' : 'Техник (по избор)'}
             </label>
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(Number(e.target.value))}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              required
+              required={type === 'income'}
             >
-              <option value={0}>Избери техник...</option>
+              <option value={0}>
+                {type === 'expense' ? '-- Директорски разход --' : 'Избери техник...'}
+              </option>
               {users.filter(u => u.role === 'technician').map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
               ))}
             </select>
+            {type === 'expense' && selectedUser === 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                💼 Разходът ще се запише като директорски (заплати, наеми, доставчици и др.)
+              </p>
+            )}
           </div>
 
           {/* Amount */}
@@ -226,7 +246,7 @@ const NewTransactionModal = ({ isOpen, onClose, users, onSubmit }: NewTransactio
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !selectedUser || !amount}
+              disabled={isSubmitting || !amount || (type === 'income' && !selectedUser)}
               className={`flex-1 px-4 py-3 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
                 type === 'income' 
                   ? 'bg-green-600 hover:bg-green-700' 
