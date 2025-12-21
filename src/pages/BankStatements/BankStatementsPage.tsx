@@ -18,7 +18,8 @@ import {
   CreditCard,
   ChevronDown,
   ChevronUp,
-  Wallet
+  Wallet,
+  Banknote
 } from 'lucide-react';
 
 export const BankStatementsPage = () => {
@@ -34,10 +35,12 @@ export const BankStatementsPage = () => {
     totalCredit: 0,
     bankFeesTotal: 0,
     loanPaymentsTotal: 0,
+    cashWithdrawalTotal: 0,
     netChange: 0,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+    cash_withdrawal: true,
     bank_fees: false,
     loan_payment: false,
     transfer: true,
@@ -106,6 +109,7 @@ export const BankStatementsPage = () => {
           totalCredit: response.data.totalCredit || 0,
           bankFeesTotal: response.data.bankFeesTotal || 0,
           loanPaymentsTotal: response.data.loanPaymentsTotal || 0,
+          cashWithdrawalTotal: response.data.cashWithdrawalTotal || 0,
           netChange: response.data.netChange || 0,
         });
       } else {
@@ -139,7 +143,7 @@ export const BankStatementsPage = () => {
 
   const clearData = () => {
     setTransactions([]);
-    setStats({ count: 0, totalDebit: 0, totalCredit: 0, bankFeesTotal: 0, loanPaymentsTotal: 0, netChange: 0 });
+    setStats({ count: 0, totalDebit: 0, totalCredit: 0, bankFeesTotal: 0, loanPaymentsTotal: 0, cashWithdrawalTotal: 0, netChange: 0 });
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -148,6 +152,7 @@ export const BankStatementsPage = () => {
 
   // Group transactions by category
   const groupedTransactions = {
+    cash_withdrawal: transactions.filter(tx => tx.category === 'cash_withdrawal'),
     bank_fees: transactions.filter(tx => tx.category === 'bank_fees'),
     loan_payment: transactions.filter(tx => tx.category === 'loan_payment'),
     transfer: transactions.filter(tx => tx.category === 'transfer'),
@@ -155,6 +160,13 @@ export const BankStatementsPage = () => {
   };
 
   const categoryInfo: Record<string, { title: string; icon: React.ReactNode; bgColor: string; textColor: string; description: string }> = {
+    cash_withdrawal: {
+      title: 'Изтеглени пари в брой',
+      icon: <Banknote className="w-5 h-5" />,
+      bgColor: 'bg-green-100',
+      textColor: 'text-green-600',
+      description: 'Картови транзакции на каса',
+    },
     bank_fees: {
       title: 'Банкови услуги',
       icon: <Landmark className="w-5 h-5" />,
@@ -486,6 +498,12 @@ export const BankStatementsPage = () => {
               <div>
                 <h3 className="font-semibold text-blue-800">Обобщение на разходите</h3>
                 <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-700">Изтеглени в брой:</span>
+                    <span className="ml-2 font-medium text-green-700">
+                      {stats.cashWithdrawalTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                    </span>
+                  </div>
                   <div>
                     <span className="text-blue-700">Банкови такси:</span>
                     <span className="ml-2 font-medium text-blue-900">

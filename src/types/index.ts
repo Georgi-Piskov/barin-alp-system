@@ -140,7 +140,7 @@ export interface BankTransaction {
   balance?: number;
   currency: string;
   iban?: string;
-  category?: 'bank_fees' | 'loan_payment' | 'transfer' | 'other';
+  category?: 'bank_fees' | 'loan_payment' | 'cash_withdrawal' | 'transfer' | 'other';
   counterpartyName?: string;
   invoiceRef?: string;
   purpose?: string;
@@ -158,5 +158,6 @@ export interface BankStatementParseResult {
   totalCredit: number;
   bankFeesTotal?: number;
   loanPaymentsTotal?: number;
+  cashWithdrawalTotal?: number;
   netChange?: number;
 }
