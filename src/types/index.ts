@@ -134,11 +134,19 @@ export interface BankTransaction {
   date: string;
   reference: string;
   description: string;
+  displayName?: string;
   type: 'debit' | 'credit';
   amount: number;
   balance?: number;
   currency: string;
   iban?: string;
+  category?: 'bank_fees' | 'loan_payment' | 'transfer' | 'other';
+  counterpartyName?: string;
+  invoiceRef?: string;
+  purpose?: string;
+  isCompanyExpense?: boolean;
+  objectId?: number | null;
+  objectName?: string | null;
   status: 'matched' | 'unmatched';
   matchedInvoiceId?: number;
 }
@@ -148,4 +156,7 @@ export interface BankStatementParseResult {
   count: number;
   totalDebit: number;
   totalCredit: number;
+  bankFeesTotal?: number;
+  loanPaymentsTotal?: number;
+  netChange?: number;
 }
