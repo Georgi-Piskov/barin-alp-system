@@ -3,8 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "PUT",
-        "path": "barin-alp/bank-transactions/:id",
+        "httpMethod": "POST",
+        "path": "barin-alp/bank-transactions/update",
         "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const params = $input.item.json.params;\nconst body = $input.item.json.body;\n\nconst transactionId = params.id;\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\n\nconsole.log('Input params:', params);\nconsole.log('Input body:', body);\n\nif (!transactionId) {\n  throw new Error('Transaction ID is required');\n}\n\nreturn [{ \n  json: { \n    id: parseInt(transactionId),\n    objectId: objectId !== null && objectId !== undefined ? String(objectId) : '',\n    objectName: objectName,\n    status: status\n  } \n}];"
+        "jsCode": "const body = $input.item.json.body;\n\nconst transactionId = body.id;\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\n\nconsole.log('Update Bank Transaction - Input:', body);\n\nif (!transactionId) {\n  throw new Error('Transaction ID is required');\n}\n\nreturn [{ \n  json: { \n    id: parseInt(transactionId),\n    objectId: objectId !== null && objectId !== undefined ? String(objectId) : '',\n    objectName: objectName,\n    status: status\n  } \n}];"
       },
       "id": "prepare",
       "name": "Prepare Data",

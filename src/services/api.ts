@@ -667,12 +667,13 @@ export const apiService = {
       return { success: true };
     }
 
-    const url = `${buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_BANK_TRANSACTION)}/${id}`;
+    const url = buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_BANK_TRANSACTION);
+    const payload = { id, ...data };
     console.log('UPDATE BANK TX - URL:', url);
-    console.log('UPDATE BANK TX - Data:', data);
+    console.log('UPDATE BANK TX - Data:', payload);
 
     try {
-      const response = await api.put(url, data);
+      const response = await api.post(url, payload);
       
       console.log('Update Bank Transaction response from n8n:', response.data);
       
