@@ -519,8 +519,8 @@ export const BankStatementsPage = () => {
                                   </p>
                                 )}
 
-                                {/* Object Assignment - only for transfers */}
-                                {category === 'transfer' && tx.type === 'debit' && (
+                                {/* Object Assignment - for all transfer transactions (debit AND credit) */}
+                                {category === 'transfer' && (
                                   <div className="mt-2 flex items-center gap-2">
                                     <Building2 className="w-4 h-4 text-gray-400" />
                                     <select

@@ -167,13 +167,50 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get all collected data\nconst data = $input.first().json;\n\nconst transactions = data.transactions || [];\nconst invoices = data.invoices || [];\nconst objects = data.objects || [];\nconst users = data.users || [];\n\n// Helper: Check if objectName is valid (not JSON)\nconst isValidObjectName = (name) => {\n  if (!name) return false;\n  const str = String(name).trim();\n  return str.length > 0 && !str.startsWith('[') && !str.startsWith('{');\n};\n\n// Helper: Get real objectName from OBJECTS sheet by objectId\nconst getObjectNameById = (objectId) => {\n  const obj = objects.find(o => String(o.ID) === String(objectId));\n  return obj ? obj.NAME : null;\n};\n\n// Calculate technician balances\nconst technicianBalances = {};\n\nusers.forEach(user => {\n  if (user.role === 'technician') {\n    technicianBalances[user.id] = {\n      userId: parseInt(user.id) || 0,\n      userName: user.name || 'Unknown',\n      income: 0,\n      expense: 0,\n      balance: 0\n    };\n  }\n});\n\n// Process transactions\ntransactions.forEach(t => {\n  const odorId = String(t.userId);\n  const amount = parseFloat(t.amount) || 0;\n  \n  if (technicianBalances[userId]) {\n    if (t.type === 'income') {\n      technicianBalances[userId].income += amount;\n    } else if (t.type === 'expense') {\n      technicianBalances[userId].expense += amount;\n    }\n  }\n});\n\n// Also count expenses from invoices (created by technicians)\ninvoices.forEach(inv => {\n  const odorId = String(inv.createdBy);\n  const amount = parseFloat(inv.total) || 0;\n  \n  if (technicianBalances[userId]) {\n    technicianBalances[userId].expense += amount;\n  }\n});\n\n// Calculate final balances\nObject.values(technicianBalances).forEach(tb => {\n  tb.balance = tb.income - tb.expense;\n});\n\n// Calculate expenses by object\nconst expensesByObject = {};\nlet unassignedExpenses = 0;\n\ninvoices.forEach(inv => {\n  const amount = parseFloat(inv.total) || 0;\n  const objectId = inv.objectId;\n  let objectName = inv.objectName;\n  \n  // Fix: If objectName is JSON (data corruption), try to get real name from OBJECTS\n  if (!isValidObjectName(objectName) && objectId) {\n    objectName = getObjectNameById(objectId);\n  }\n  \n  if (objectId && isValidObjectName(objectName)) {\n    const key = String(objectId);\n    if (!expensesByObject[key]) {\n      expensesByObject[key] = {\n        objectId: parseInt(objectId) || 0,\n        objectName: objectName,\n        totalExpenses: 0,\n        invoiceCount: 0\n      };\n    }\n    expensesByObject[key].totalExpenses += amount;\n    expensesByObject[key].invoiceCount += 1;\n  } else {\n    unassignedExpenses += amount;\n  }\n});\n\n// Total calculations\nconst totalIncome = transactions\n  .filter(t => t.type === 'income')\n  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);\n\nconst totalExpenses = invoices\n  .reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);\n\n// Count active objects\nconst activeObjects = objects.filter(o => o.STATUS === 'active').length;\n\n// Count technicians\nconst technicianCount = users.filter(u => u.role === 'technician').length;\n\nconst dashboardStats = {\n  totalIncome,\n  totalExpenses,\n  netBalance: totalIncome - totalExpenses,\n  unassignedExpenses,\n  totalObjects: objects.length,\n  activeObjects,\n  totalInvoices: invoices.length,\n  totalTransactions: transactions.length,\n  technicianCount,\n  technicianBalances: Object.values(technicianBalances),\n  expensesByObject: Object.values(expensesByObject).sort((a, b) => b.totalExpenses - a.totalExpenses),\n  recentTransactions: transactions.slice(-10).reverse(),\n  recentInvoices: invoices.slice(-10).reverse()\n};\n\nreturn [{ json: { success: true, data: dashboardStats } }];"
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BankTransactions",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "get-bank-transactions",
+      "name": "Get Bank Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2050, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Store Users').first().json;\nconst bankTransactions = $input.all().map(i => i.json);\nreturn [{ json: { ...prev, bankTransactions } }];"
+      },
+      "id": "store-bank-transactions",
+      "name": "Store Bank Transactions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all collected data\nconst data = $input.first().json;\n\nconst transactions = data.transactions || [];\nconst invoices = data.invoices || [];\nconst objects = data.objects || [];\nconst users = data.users || [];\nconst bankTransactions = data.bankTransactions || [];\n\n// Helper: Check if objectName is valid (not JSON)\nconst isValidObjectName = (name) => {\n  if (!name) return false;\n  const str = String(name).trim();\n  return str.length > 0 && !str.startsWith('[') && !str.startsWith('{');\n};\n\n// Helper: Get real objectName from OBJECTS sheet by objectId\nconst getObjectNameById = (objectId) => {\n  const obj = objects.find(o => String(o.ID) === String(objectId));\n  return obj ? obj.NAME : null;\n};\n\n// Calculate technician balances\nconst technicianBalances = {};\n\nusers.forEach(user => {\n  if (user.role === 'technician') {\n    technicianBalances[user.id] = {\n      userId: parseInt(user.id) || 0,\n      userName: user.name || 'Unknown',\n      income: 0,\n      expense: 0,\n      balance: 0\n    };\n  }\n});\n\n// Process transactions\ntransactions.forEach(t => {\n  const userId = String(t.userId);\n  const amount = parseFloat(t.amount) || 0;\n  \n  if (technicianBalances[userId]) {\n    if (t.type === 'income') {\n      technicianBalances[userId].income += amount;\n    } else if (t.type === 'expense') {\n      technicianBalances[userId].expense += amount;\n    }\n  }\n});\n\n// Calculate final balances\nObject.values(technicianBalances).forEach(tb => {\n  tb.balance = tb.income - tb.expense;\n});\n\n// Calculate expenses by object from INVOICES\nconst expensesByObject = {};\nlet unassignedExpenses = 0;\n\ninvoices.forEach(inv => {\n  const amount = parseFloat(inv.total) || 0;\n  const objectId = inv.objectId;\n  let objectName = inv.objectName;\n  \n  // Fix: If objectName is JSON (data corruption), try to get real name from OBJECTS\n  if (!isValidObjectName(objectName) && objectId) {\n    objectName = getObjectNameById(objectId);\n  }\n  \n  if (objectId && isValidObjectName(objectName)) {\n    const key = String(objectId);\n    if (!expensesByObject[key]) {\n      expensesByObject[key] = {\n        objectId: parseInt(objectId) || 0,\n        objectName: objectName,\n        totalExpenses: 0,\n        invoiceCount: 0,\n        bankTransactionCount: 0\n      };\n    }\n    expensesByObject[key].totalExpenses += amount;\n    expensesByObject[key].invoiceCount += 1;\n  } else {\n    unassignedExpenses += amount;\n  }\n});\n\n// Add bank transactions assigned to objects (debit = expense)\nbankTransactions.forEach(bt => {\n  if (bt.type !== 'debit') return; // Only count expenses\n  if (bt.category === 'bank_fees' || bt.category === 'loan_payment' || bt.category === 'cash_withdrawal') return; // Skip company-level expenses\n  \n  const amount = parseFloat(bt.amount) || 0;\n  const objectId = bt.objectId;\n  let objectName = bt.objectName;\n  \n  if (!isValidObjectName(objectName) && objectId) {\n    objectName = getObjectNameById(objectId);\n  }\n  \n  if (objectId && isValidObjectName(objectName)) {\n    const key = String(objectId);\n    if (!expensesByObject[key]) {\n      expensesByObject[key] = {\n        objectId: parseInt(objectId) || 0,\n        objectName: objectName,\n        totalExpenses: 0,\n        invoiceCount: 0,\n        bankTransactionCount: 0\n      };\n    }\n    expensesByObject[key].totalExpenses += amount;\n    expensesByObject[key].bankTransactionCount += 1;\n  }\n});\n\n// Total calculations\nconst totalIncome = transactions\n  .filter(t => t.type === 'income')\n  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);\n\nconst totalExpenses = invoices\n  .reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0);\n\n// Count active objects\nconst activeObjects = objects.filter(o => o.STATUS === 'active').length;\n\n// Count technicians\nconst technicianCount = users.filter(u => u.role === 'technician').length;\n\nconst dashboardStats = {\n  totalIncome,\n  totalExpenses,\n  netBalance: totalIncome - totalExpenses,\n  unassignedExpenses,\n  totalObjects: objects.length,\n  activeObjects,\n  totalInvoices: invoices.length,\n  totalTransactions: transactions.length,\n  technicianCount,\n  technicianBalances: Object.values(technicianBalances),\n  expensesByObject: Object.values(expensesByObject).sort((a, b) => b.totalExpenses - a.totalExpenses),\n  recentTransactions: transactions.slice(-10).reverse(),\n  recentInvoices: invoices.slice(-10).reverse()\n};\n\nreturn [{ json: { success: true, data: dashboardStats } }];"
       },
       "id": "calculate-stats",
       "name": "Calculate Stats",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2050, 300]
+      "position": [2450, 300]
     },
     {
       "parameters": {
@@ -185,7 +222,7 @@
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2250, 300]
+      "position": [2650, 300]
     }
   ],
   "connections": {
@@ -230,6 +267,16 @@
       ]
     },
     "Store Users": {
+      "main": [
+        [{ "node": "Get Bank Transactions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Bank Transactions": {
+      "main": [
+        [{ "node": "Store Bank Transactions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Store Bank Transactions": {
       "main": [
         [{ "node": "Calculate Stats", "type": "main", "index": 0 }]
       ]
