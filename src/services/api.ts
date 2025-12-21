@@ -412,10 +412,7 @@ export const apiService = {
         }
       );
       
-      console.log('Upload Photo response from n8n:', response.data);
-      console.log('Upload Photo response.data.success:', response.data?.success);
-      console.log('Upload Photo response.data.data:', response.data?.data);
-      console.log('Upload Photo response.data.data?.url:', response.data?.data?.url);
+      console.log('Upload Photo RAW response:', JSON.stringify(response.data, null, 2));
       
       // Handle different response formats from n8n
       if (response.data?.success && response.data?.data?.url) {
