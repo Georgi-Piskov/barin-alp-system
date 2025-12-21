@@ -342,9 +342,11 @@ export const BankStatementsPage = () => {
                           {tx.type === 'credit' ? '+' : '-'}
                           {tx.amount.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
                         </p>
-                        <p className="text-xs text-gray-400">
-                          Салдо: {tx.balance.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
-                        </p>
+                        {tx.balance !== undefined && (
+                          <p className="text-xs text-gray-400">
+                            Салдо: {tx.balance.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
