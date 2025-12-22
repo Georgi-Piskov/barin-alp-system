@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { ConstructionObject } from '../../types';
+import { ConstructionObject, Invoice, BankTransaction } from '../../types';
 import { 
   Building2, 
   Plus, 
@@ -23,12 +23,17 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   paused: { label: 'На изчакване', color: 'bg-yellow-100 text-yellow-700' },
 };
 
+// Interface for object with calculated expenses
+interface ObjectWithExpenses extends ConstructionObject {
+  calculatedExpenses: number;
+}
+
 export const ObjectsPage = () => {
   const { user } = useAuthStore();
   const isDirector = user?.role === 'director';
   
-  const [objects, setObjects] = useState<ConstructionObject[]>([]);
-  const [filteredObjects, setFilteredObjects] = useState<ConstructionObject[]>([]);
+  const [objects, setObjects] = useState<ObjectWithExpenses[]>([]);
+  const [filteredObjects, setFilteredObjects] = useState<ObjectWithExpenses[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -37,19 +42,48 @@ export const ObjectsPage = () => {
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadObjects();
+    loadData();
   }, [user]);
 
   useEffect(() => {
     filterObjects();
   }, [objects, searchTerm, statusFilter]);
 
-  const loadObjects = async () => {
+  const loadData = async () => {
     setIsLoading(true);
-    const response = await apiService.getObjects(user?.id, user?.role);
-    if (response.success && response.data) {
-      setObjects(response.data);
+    
+    // Load objects, invoices and bank transactions in parallel
+    const [objectsRes, invoicesRes, bankTxRes] = await Promise.all([
+      apiService.getObjects(user?.id, user?.role),
+      apiService.getInvoices(),
+      apiService.getBankTransactions(),
+    ]);
+    
+    if (objectsRes.success && objectsRes.data) {
+      const invoices: Invoice[] = invoicesRes.success && invoicesRes.data ? invoicesRes.data : [];
+      const bankTransactions: BankTransaction[] = bankTxRes.success && bankTxRes.data?.transactions ? bankTxRes.data.transactions : [];
+      
+      // Calculate real expenses for each object
+      const objectsWithExpenses: ObjectWithExpenses[] = objectsRes.data.map(obj => {
+        // Sum invoices for this object
+        const invoiceTotal = invoices
+          .filter(inv => inv.objectId === obj.id)
+          .reduce((sum, inv) => sum + (inv.total || 0), 0);
+        
+        // Sum bank transactions (debit only, transfer category) for this object
+        const bankTotal = bankTransactions
+          .filter(tx => tx.objectId === obj.id && tx.type === 'debit' && tx.category === 'transfer')
+          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        
+        return {
+          ...obj,
+          calculatedExpenses: invoiceTotal + bankTotal
+        };
+      });
+      
+      setObjects(objectsWithExpenses);
     }
+    
     setIsLoading(false);
   };
 
@@ -100,10 +134,9 @@ export const ObjectsPage = () => {
       const response = await apiService.updateObject(editingObject.id, objectData);
       console.log('Update response:', response);
       
-      if (response.success && response.data) {
-        setObjects(objects.map(obj => 
-          obj.id === editingObject.id ? response.data! : obj
-        ));
+      if (response.success) {
+        // Reload all data to get updated expenses
+        await loadData();
       } else {
         alert('Грешка при обновяване: ' + (response.error || 'Неизвестна грешка'));
       }
@@ -112,8 +145,9 @@ export const ObjectsPage = () => {
       const response = await apiService.createObject(objectData);
       console.log('Create response:', response);
       
-      if (response.success && response.data) {
-        setObjects([...objects, response.data]);
+      if (response.success) {
+        // Reload all data
+        await loadData();
       } else {
         alert('Грешка при създаване: ' + (response.error || 'Неизвестна грешка'));
       }
@@ -309,7 +343,7 @@ export const ObjectsPage = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Разходи</span>
                     <span className="text-lg font-bold text-gray-900">
-                      {object.totalExpenses.toLocaleString('bg-BG')} €
+                      {object.calculatedExpenses.toLocaleString('bg-BG')} €
                     </span>
                   </div>
                 </div>

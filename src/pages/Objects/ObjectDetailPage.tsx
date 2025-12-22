@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { ConstructionObject, User, Invoice, InventoryItem } from '../../types';
+import { ConstructionObject, User, Invoice, InventoryItem, BankTransaction } from '../../types';
 import { 
   ArrowLeft, 
   Building2, 
@@ -38,6 +38,7 @@ export const ObjectDetailPage = () => {
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -49,11 +50,12 @@ export const ObjectDetailPage = () => {
     setIsLoading(true);
     
     // Load all data in parallel
-    const [objectsRes, usersRes, invoicesRes, inventoryRes] = await Promise.all([
+    const [objectsRes, usersRes, invoicesRes, inventoryRes, bankTxRes] = await Promise.all([
       apiService.getObjects(user?.id, user?.role),
       apiService.getUsers(),
       apiService.getInvoices(),
       apiService.getInventory(),
+      apiService.getBankTransactions(),
     ]);
     
     if (objectsRes.success && objectsRes.data) {
@@ -73,6 +75,15 @@ export const ObjectDetailPage = () => {
     if (inventoryRes.success && inventoryRes.data) {
       // Filter inventory for this object
       setInventory(inventoryRes.data.filter(item => item.objectId === Number(id)));
+    }
+    
+    if (bankTxRes.success && bankTxRes.data?.transactions) {
+      // Filter bank transactions for this object (debit + transfer category)
+      setBankTransactions(
+        bankTxRes.data.transactions.filter(
+          (tx: BankTransaction) => tx.objectId === Number(id) && tx.type === 'debit' && tx.category === 'transfer'
+        )
+      );
     }
     
     setIsLoading(false);
@@ -206,7 +217,7 @@ export const ObjectDetailPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {invoices.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('bg-BG')} €
+                {(invoices.reduce((sum, inv) => sum + inv.total, 0) + bankTransactions.reduce((sum, tx) => sum + tx.amount, 0)).toLocaleString('bg-BG')} €
               </p>
               <p className="text-sm text-gray-500">Общи разходи</p>
             </div>
@@ -243,8 +254,8 @@ export const ObjectDetailPage = () => {
               <Receipt className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">0</p>
-              <p className="text-sm text-gray-500">Транзакции</p>
+              <p className="text-2xl font-bold text-gray-900">{bankTransactions.length}</p>
+              <p className="text-sm text-gray-500">Банкови плащания</p>
             </div>
           </div>
         </div>
