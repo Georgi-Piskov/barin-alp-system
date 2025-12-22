@@ -52,43 +52,62 @@ export const ObjectsPage = () => {
   const loadData = async () => {
     setIsLoading(true);
     
-    // Load objects, invoices, bank transactions and cash transactions in parallel
-    const [objectsRes, invoicesRes, bankTxRes, transactionsRes] = await Promise.all([
-      apiService.getObjects(user?.id, user?.role),
-      apiService.getInvoices(),
-      apiService.getBankTransactions(),
-      apiService.getTransactions(),
-    ]);
-    
-    if (objectsRes.success && objectsRes.data) {
-      const invoices: Invoice[] = invoicesRes.success && invoicesRes.data ? invoicesRes.data : [];
-      const bankTransactions: BankTransaction[] = bankTxRes.success && bankTxRes.data?.transactions ? bankTxRes.data.transactions : [];
-      const cashTransactions: Transaction[] = transactionsRes.success && transactionsRes.data ? transactionsRes.data : [];
+    try {
+      // Load objects first (most important)
+      const objectsRes = await apiService.getObjects(user?.id, user?.role);
       
-      // Calculate real expenses for each object
-      const objectsWithExpenses: ObjectWithExpenses[] = objectsRes.data.map(obj => {
-        // Sum invoices for this object
-        const invoiceTotal = invoices
-          .filter(inv => inv.objectId === obj.id)
-          .reduce((sum, inv) => sum + (inv.total || 0), 0);
+      if (objectsRes.success && objectsRes.data) {
+        // Small delay to avoid quota, then load the rest
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Sum bank transactions (debit only) for this object
-        const bankTotal = bankTransactions
-          .filter(tx => tx.objectId === obj.id && tx.type === 'debit')
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        // Load invoices, bank transactions and cash transactions with delays
+        const invoicesRes = await apiService.getInvoices();
+        await new Promise(resolve => setTimeout(resolve, 200));
         
-        // Sum cash transactions (expense only) for this object
-        const cashTotal = cashTransactions
-          .filter(tx => tx.objectId === obj.id && tx.type === 'expense')
-          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        const bankTxRes = await apiService.getBankTransactions();
+        await new Promise(resolve => setTimeout(resolve, 200));
         
-        return {
+        const transactionsRes = await apiService.getTransactions();
+        
+        const invoices: Invoice[] = invoicesRes.success && invoicesRes.data ? invoicesRes.data : [];
+        const bankTransactions: BankTransaction[] = bankTxRes.success && bankTxRes.data?.transactions ? bankTxRes.data.transactions : [];
+        const cashTransactions: Transaction[] = transactionsRes.success && transactionsRes.data ? transactionsRes.data : [];
+        
+        // Calculate real expenses for each object
+        const objectsWithExpenses: ObjectWithExpenses[] = objectsRes.data.map(obj => {
+          // Sum invoices for this object
+          const invoiceTotal = invoices
+            .filter(inv => inv.objectId === obj.id)
+            .reduce((sum, inv) => sum + (inv.total || 0), 0);
+          
+          // Sum bank transactions (debit only) for this object
+          const bankTotal = bankTransactions
+            .filter(tx => tx.objectId === obj.id && tx.type === 'debit')
+            .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+          
+          // Sum cash transactions (expense only) for this object
+          const cashTotal = cashTransactions
+            .filter(tx => tx.objectId === obj.id && tx.type === 'expense')
+            .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+          
+          return {
+            ...obj,
+            calculatedExpenses: invoiceTotal + bankTotal + cashTotal
+          };
+        });
+        
+        setObjects(objectsWithExpenses);
+      }
+    } catch (error) {
+      console.error('Error loading objects data:', error);
+      // On error, try to load just objects
+      const objectsRes = await apiService.getObjects(user?.id, user?.role);
+      if (objectsRes.success && objectsRes.data) {
+        setObjects(objectsRes.data.map(obj => ({
           ...obj,
-          calculatedExpenses: invoiceTotal + bankTotal + cashTotal
-        };
-      });
-      
-      setObjects(objectsWithExpenses);
+          calculatedExpenses: obj.totalExpenses || 0
+        })));
+      }
     }
     
     setIsLoading(false);

@@ -50,49 +50,25 @@ export const ObjectDetailPage = () => {
   }, [id]);
 
   const loadData = async () => {
+    if (!id) return;
     setIsLoading(true);
     
-    // Load all data in parallel
-    const [objectsRes, usersRes, invoicesRes, inventoryRes, bankTxRes, transactionsRes] = await Promise.all([
-      apiService.getObjects(user?.id, user?.role),
-      apiService.getUsers(),
-      apiService.getInvoices(),
-      apiService.getInventory(),
-      apiService.getBankTransactions(),
-      apiService.getTransactions(),
-    ]);
-    
-    if (objectsRes.success && objectsRes.data) {
-      const found = objectsRes.data.find(obj => obj.id === Number(id));
-      setObject(found || null);
-    }
-    
-    if (usersRes.success && usersRes.data) {
-      setTechnicians(usersRes.data.filter(u => u.role === 'technician'));
-    }
-    
-    if (invoicesRes.success && invoicesRes.data) {
-      // Filter invoices for this object
-      setInvoices(invoicesRes.data.filter(inv => inv.objectId === Number(id)));
-    }
-    
-    if (inventoryRes.success && inventoryRes.data) {
-      // Filter inventory for this object
-      setInventory(inventoryRes.data.filter(item => item.objectId === Number(id)));
-    }
-    
-    if (bankTxRes.success && bankTxRes.data?.transactions) {
-      // Filter bank transactions for this object
-      setBankTransactions(
-        bankTxRes.data.transactions.filter(
-          (tx: BankTransaction) => tx.objectId === Number(id)
-        )
-      );
-    }
-    
-    if (transactionsRes.success && transactionsRes.data) {
-      // Filter transactions for this object
-      setTransactions(transactionsRes.data.filter(tx => tx.objectId === Number(id)));
+    try {
+      // Use combined endpoint to reduce API calls and avoid quota limits
+      const result = await apiService.getObjectDetails(Number(id));
+      
+      if (result.success && result.data) {
+        setObject(result.data.object || null);
+        setTechnicians(result.data.technicians || []);
+        setInvoices(result.data.invoices || []);
+        setInventory(result.data.inventory || []);
+        setBankTransactions(result.data.bankTransactions || []);
+        setTransactions(result.data.transactions || []);
+      } else {
+        console.error('Failed to load object details:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading object details:', error);
     }
     
     setIsLoading(false);

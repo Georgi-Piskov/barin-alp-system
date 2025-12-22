@@ -24,6 +24,41 @@ const api = axios.create({
 // Set to false when n8n backend is ready, or use env variable
 const DEMO_MODE = false; // n8n backend is now active!
 
+// ==================== CACHING ====================
+// Simple cache to reduce API calls and avoid quota limits
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cache: Map<string, CacheEntry<unknown>> = new Map();
+const CACHE_TTL = 30000; // 30 seconds cache
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    console.log(`Cache hit: ${key}`);
+    return entry.data as T;
+  }
+  return null;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+function clearCache(keyPrefix?: string): void {
+  if (keyPrefix) {
+    for (const key of cache.keys()) {
+      if (key.startsWith(keyPrefix)) {
+        cache.delete(key);
+      }
+    }
+  } else {
+    cache.clear();
+  }
+}
+
 // Mock users data (matches your Google Sheet)
 const MOCK_USERS: User[] = [
   { id: 1, username: 'director1', name: 'Георги Директор', role: 'director', pin: '7087' },
@@ -713,4 +748,175 @@ export const apiService = {
       return { success: false, error: 'Грешка при зареждане на потребители', data: [] };
     }
   },
+
+  // ==================== OBJECT DETAILS (Combined) ====================
+  // Returns all data for an object in a single API call to reduce quota usage
+  async getObjectDetails(objectId: number): Promise<ApiResponse<{
+    object: ConstructionObject;
+    technicians: User[];
+    invoices: Invoice[];
+    inventory: InventoryItem[];
+    bankTransactions: BankTransaction[];
+    transactions: Transaction[];
+  }>> {
+    const cacheKey = `object-details-${objectId}`;
+    
+    // Check cache first
+    const cached = getCached<typeof cacheKey>(cacheKey);
+    if (cached) {
+      return { success: true, data: cached as any };
+    }
+
+    if (DEMO_MODE) {
+      const obj = MOCK_OBJECTS.find(o => o.id === objectId);
+      if (!obj) return { success: false, error: 'Object not found' };
+      
+      return { 
+        success: true, 
+        data: {
+          object: obj,
+          technicians: [],
+          invoices: [],
+          inventory: [],
+          bankTransactions: [],
+          transactions: []
+        }
+      };
+    }
+
+    try {
+      const endpoint = API_CONFIG.ENDPOINTS.GET_OBJECT_DETAILS.replace(':id', String(objectId));
+      const response = await api.get(buildApiUrl(endpoint));
+      
+      console.log('Get Object Details response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        setCache(cacheKey, response.data.data);
+        return { success: true, data: response.data.data };
+      }
+      
+      // Fallback to separate calls if combined endpoint not available
+      console.log('Combined endpoint not available, falling back to separate calls...');
+      return this.getObjectDetailsFallback(objectId);
+    } catch (error) {
+      console.error('Get Object Details error:', error);
+      // Fallback to separate calls
+      return this.getObjectDetailsFallback(objectId);
+    }
+  },
+
+  // Fallback method - uses separate calls with delays to avoid quota
+  async getObjectDetailsFallback(objectId: number): Promise<ApiResponse<{
+    object: ConstructionObject;
+    technicians: User[];
+    invoices: Invoice[];
+    inventory: InventoryItem[];
+    bankTransactions: BankTransaction[];
+    transactions: Transaction[];
+  }>> {
+    const cacheKey = `object-details-${objectId}`;
+    
+    try {
+      // Add small delays between calls to avoid hitting quota
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      // Load objects (uses cache if available)
+      const objectsCacheKey = 'objects-list';
+      let objects = getCached<ConstructionObject[]>(objectsCacheKey);
+      if (!objects) {
+        const objectsResult = await this.getObjects();
+        objects = objectsResult.success ? objectsResult.data || [] : [];
+        setCache(objectsCacheKey, objects);
+      }
+      
+      const object = objects.find(o => o.id === objectId);
+      if (!object) {
+        return { success: false, error: 'Обектът не е намерен' };
+      }
+      
+      await delay(200);
+      
+      // Load users (for technicians)
+      const usersCacheKey = 'users-list';
+      let users = getCached<User[]>(usersCacheKey);
+      if (!users) {
+        const usersResult = await this.getUsers();
+        users = usersResult.success ? usersResult.data || [] : [];
+        setCache(usersCacheKey, users);
+      }
+      
+      const techIds = object.assignedTechnicians || [];
+      const technicians = users.filter(u => techIds.includes(u.id) && u.role === 'technician');
+      
+      await delay(200);
+      
+      // Load invoices (uses cache)
+      const invoicesCacheKey = 'invoices-list';
+      let allInvoices = getCached<Invoice[]>(invoicesCacheKey);
+      if (!allInvoices) {
+        const invoicesResult = await this.getInvoices();
+        allInvoices = invoicesResult.success ? invoicesResult.data || [] : [];
+        setCache(invoicesCacheKey, allInvoices);
+      }
+      const invoices = allInvoices.filter(inv => inv.objectId === objectId);
+      
+      await delay(200);
+      
+      // Load inventory (uses cache)
+      const inventoryCacheKey = 'inventory-list';
+      let allInventory = getCached<InventoryItem[]>(inventoryCacheKey);
+      if (!allInventory) {
+        const inventoryResult = await this.getInventory();
+        allInventory = inventoryResult.success ? inventoryResult.data || [] : [];
+        setCache(inventoryCacheKey, allInventory);
+      }
+      const inventory = allInventory.filter(item => item.objectId === objectId);
+      
+      await delay(200);
+      
+      // Load bank transactions (uses cache)
+      const bankCacheKey = 'bank-transactions-list';
+      let allBankTx = getCached<BankTransaction[]>(bankCacheKey);
+      if (!allBankTx) {
+        const bankResult = await this.getBankTransactions();
+        // getBankTransactions returns { transactions: [...] } format
+        allBankTx = bankResult.success && bankResult.data?.transactions ? bankResult.data.transactions : [];
+        setCache(bankCacheKey, allBankTx);
+      }
+      const bankTransactions = (allBankTx || []).filter(tx => tx.objectId === objectId);
+      
+      await delay(200);
+      
+      // Load transactions (uses cache)
+      const transactionsCacheKey = 'transactions-list';
+      let allTransactions = getCached<Transaction[]>(transactionsCacheKey);
+      if (!allTransactions) {
+        const transactionsResult = await this.getTransactions();
+        allTransactions = transactionsResult.success ? transactionsResult.data || [] : [];
+        setCache(transactionsCacheKey, allTransactions);
+      }
+      const transactions = allTransactions.filter(tx => tx.objectId === objectId);
+      
+      const result = {
+        object,
+        technicians,
+        invoices,
+        inventory,
+        bankTransactions,
+        transactions
+      };
+      
+      setCache(cacheKey, result);
+      
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Get Object Details Fallback error:', error);
+      return { success: false, error: 'Грешка при зареждане на данни за обекта' };
+    }
+  },
+
+  // Clear cache (call after mutations)
+  clearCache(prefix?: string): void {
+    clearCache(prefix);
+  }
 };

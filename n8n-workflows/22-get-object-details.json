@@ -1,0 +1,293 @@
+{
+  "name": "BARIN-ALP: Get Object Details",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "barin-alp/objects/:id/details",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "barin-alp-object-details"
+    },
+    {
+      "parameters": {
+        "jsCode": "const objectId = $input.item.json.params.id;\nreturn [{ json: { objectId: parseInt(objectId) } }];"
+      },
+      "id": "getParams",
+      "name": "Get Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "OBJECTS",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "getObjects",
+      "name": "Get Objects",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [650, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Users",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "getUsers",
+      "name": "Get Users",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [650, 250],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Invoices",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "getInvoices",
+      "name": "Get Invoices",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [650, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Inventory",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "getInventory",
+      "name": "Get Inventory",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [650, 550],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BankTransactions",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "getBankTx",
+      "name": "Get Bank Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [650, 700],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Transactions",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "getTransactions",
+      "name": "Get Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [650, 850],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "merge",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all data from merged inputs\nconst allItems = $input.all().map(i => i.json);\nconst objectId = $('Get Params').first().json.objectId;\n\n// Separate data by source (based on field names)\nlet objects = [];\nlet users = [];\nlet invoices = [];\nlet inventory = [];\nlet bankTransactions = [];\nlet transactions = [];\n\nallItems.forEach(item => {\n  if (item.ID && item.NAME && item.STATUS) {\n    objects.push(item);\n  } else if (item.username && item.role) {\n    users.push(item);\n  } else if (item.invoiceNumber && item.supplier) {\n    invoices.push(item);\n  } else if (item.category && item.assignedTo !== undefined) {\n    inventory.push(item);\n  } else if (item.reference && item.counterpartyName !== undefined) {\n    bankTransactions.push(item);\n  } else if (item.userId && item.type && (item.type === 'income' || item.type === 'expense')) {\n    transactions.push(item);\n  }\n});\n\n// Find the specific object\nconst object = objects.find(o => parseInt(o.ID) === objectId);\n\nif (!object) {\n  return [{ json: { success: false, error: 'Object not found' } }];\n}\n\n// Parse assignedTechnicians\nlet assignedTechIds = [];\nif (object.assignedTechnicians) {\n  assignedTechIds = String(object.assignedTechnicians).split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));\n}\n\n// Filter data for this object\nconst objectInvoices = invoices.filter(inv => parseInt(inv.objectId) === objectId);\nconst objectInventory = inventory.filter(item => parseInt(item.objectId) === objectId);\nconst objectBankTx = bankTransactions.filter(tx => parseInt(tx.objectId) === objectId);\nconst objectTransactions = transactions.filter(tx => parseInt(tx.objectId) === objectId);\nconst technicians = users.filter(u => u.role === 'technician');\nconst assignedTechnicians = technicians.filter(t => assignedTechIds.includes(parseInt(t.id)));\n\n// Format the response\nconst result = {\n  success: true,\n  data: {\n    object: {\n      id: parseInt(object.ID),\n      name: object.NAME,\n      address: object.ADDRESS || '',\n      status: object.STATUS || 'active',\n      totalExpenses: parseFloat(object.totalExpenses) || 0,\n      assignedTechnicians: assignedTechIds\n    },\n    technicians: assignedTechnicians.map(t => ({\n      id: parseInt(t.id),\n      username: t.username,\n      name: t.name,\n      role: t.role\n    })),\n    invoices: objectInvoices.map(inv => ({\n      id: parseInt(inv.id),\n      date: inv.date,\n      supplier: inv.supplier,\n      invoiceNumber: inv.invoiceNumber,\n      total: parseFloat(inv.total) || 0,\n      description: inv.description || '',\n      objectId: parseInt(inv.objectId) || null,\n      objectName: inv.objectName || null\n    })),\n    inventory: objectInventory.map(item => ({\n      id: parseInt(item.id),\n      name: item.name,\n      category: item.category,\n      status: item.status || 'available',\n      assignedTo: item.assignedTo ? parseInt(item.assignedTo) : null,\n      assignedToName: item.assignedToName || null,\n      objectId: parseInt(item.objectId) || null,\n      objectName: item.objectName || null\n    })),\n    bankTransactions: objectBankTx.map(tx => ({\n      id: parseInt(tx.id),\n      reference: tx.reference,\n      date: tx.date,\n      type: tx.type,\n      amount: parseFloat(tx.amount) || 0,\n      category: tx.category,\n      displayName: tx.displayName,\n      counterpartyName: tx.counterpartyName,\n      invoiceRef: tx.invoiceRef,\n      objectId: parseInt(tx.objectId) || null,\n      objectName: tx.objectName || null\n    })),\n    transactions: objectTransactions.map(tx => ({\n      id: parseInt(tx.id),\n      type: tx.type,\n      userId: parseInt(tx.userId),\n      userName: tx.userName,\n      amount: parseFloat(tx.amount) || 0,\n      date: tx.date,\n      description: tx.description,\n      objectId: parseInt(tx.objectId) || null,\n      objectName: tx.objectName || null\n    }))\n  }\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "processData",
+      "name": "Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Get Params", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Params": {
+      "main": [
+        [
+          { "node": "Get Objects", "type": "main", "index": 0 },
+          { "node": "Get Users", "type": "main", "index": 0 },
+          { "node": "Get Invoices", "type": "main", "index": 0 },
+          { "node": "Get Inventory", "type": "main", "index": 0 },
+          { "node": "Get Bank Transactions", "type": "main", "index": 0 },
+          { "node": "Get Transactions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Objects": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Users": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Invoices": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Inventory": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Bank Transactions": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Transactions": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [{ "node": "Process Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}
