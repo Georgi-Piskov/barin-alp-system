@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { ConstructionObject, Invoice, BankTransaction } from '../../types';
+import { ConstructionObject, Invoice, BankTransaction, Transaction } from '../../types';
 import { 
   Building2, 
   Plus, 
@@ -52,16 +52,18 @@ export const ObjectsPage = () => {
   const loadData = async () => {
     setIsLoading(true);
     
-    // Load objects, invoices and bank transactions in parallel
-    const [objectsRes, invoicesRes, bankTxRes] = await Promise.all([
+    // Load objects, invoices, bank transactions and cash transactions in parallel
+    const [objectsRes, invoicesRes, bankTxRes, transactionsRes] = await Promise.all([
       apiService.getObjects(user?.id, user?.role),
       apiService.getInvoices(),
       apiService.getBankTransactions(),
+      apiService.getTransactions(),
     ]);
     
     if (objectsRes.success && objectsRes.data) {
       const invoices: Invoice[] = invoicesRes.success && invoicesRes.data ? invoicesRes.data : [];
       const bankTransactions: BankTransaction[] = bankTxRes.success && bankTxRes.data?.transactions ? bankTxRes.data.transactions : [];
+      const cashTransactions: Transaction[] = transactionsRes.success && transactionsRes.data ? transactionsRes.data : [];
       
       // Calculate real expenses for each object
       const objectsWithExpenses: ObjectWithExpenses[] = objectsRes.data.map(obj => {
@@ -70,14 +72,19 @@ export const ObjectsPage = () => {
           .filter(inv => inv.objectId === obj.id)
           .reduce((sum, inv) => sum + (inv.total || 0), 0);
         
-        // Sum bank transactions (debit only, transfer category) for this object
+        // Sum bank transactions (debit only) for this object
         const bankTotal = bankTransactions
-          .filter(tx => tx.objectId === obj.id && tx.type === 'debit' && tx.category === 'transfer')
+          .filter(tx => tx.objectId === obj.id && tx.type === 'debit')
+          .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+        
+        // Sum cash transactions (expense only) for this object
+        const cashTotal = cashTransactions
+          .filter(tx => tx.objectId === obj.id && tx.type === 'expense')
           .reduce((sum, tx) => sum + (tx.amount || 0), 0);
         
         return {
           ...obj,
-          calculatedExpenses: invoiceTotal + bankTotal
+          calculatedExpenses: invoiceTotal + bankTotal + cashTotal
         };
       });
       

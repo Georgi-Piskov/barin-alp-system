@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { ConstructionObject, User, Invoice, InventoryItem, BankTransaction } from '../../types';
+import { ConstructionObject, User, Invoice, InventoryItem, BankTransaction, Transaction } from '../../types';
 import { 
   ArrowLeft, 
   Building2, 
@@ -12,13 +12,15 @@ import {
   Trash2,
   FileText,
   Package,
-  Receipt,
   TrendingDown,
+  TrendingUp,
   Calendar,
   Wrench,
   CheckCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Landmark,
+  Banknote
 } from 'lucide-react';
 import { ObjectModal } from './ObjectModal';
 
@@ -39,6 +41,7 @@ export const ObjectDetailPage = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -50,12 +53,13 @@ export const ObjectDetailPage = () => {
     setIsLoading(true);
     
     // Load all data in parallel
-    const [objectsRes, usersRes, invoicesRes, inventoryRes, bankTxRes] = await Promise.all([
+    const [objectsRes, usersRes, invoicesRes, inventoryRes, bankTxRes, transactionsRes] = await Promise.all([
       apiService.getObjects(user?.id, user?.role),
       apiService.getUsers(),
       apiService.getInvoices(),
       apiService.getInventory(),
       apiService.getBankTransactions(),
+      apiService.getTransactions(),
     ]);
     
     if (objectsRes.success && objectsRes.data) {
@@ -78,12 +82,17 @@ export const ObjectDetailPage = () => {
     }
     
     if (bankTxRes.success && bankTxRes.data?.transactions) {
-      // Filter bank transactions for this object (debit + transfer category)
+      // Filter bank transactions for this object
       setBankTransactions(
         bankTxRes.data.transactions.filter(
-          (tx: BankTransaction) => tx.objectId === Number(id) && tx.type === 'debit' && tx.category === 'transfer'
+          (tx: BankTransaction) => tx.objectId === Number(id)
         )
       );
+    }
+    
+    if (transactionsRes.success && transactionsRes.data) {
+      // Filter transactions for this object
+      setTransactions(transactionsRes.data.filter(tx => tx.objectId === Number(id)));
     }
     
     setIsLoading(false);
@@ -209,17 +218,21 @@ export const ObjectDetailPage = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
               <TrendingDown className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {(invoices.reduce((sum, inv) => sum + inv.total, 0) + bankTransactions.reduce((sum, tx) => sum + tx.amount, 0)).toLocaleString('bg-BG')} €
+              <p className="text-xl font-bold text-gray-900">
+                {(
+                  invoices.reduce((sum, inv) => sum + inv.total, 0) + 
+                  bankTransactions.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0) +
+                  transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
+                ).toLocaleString('bg-BG')} €
               </p>
-              <p className="text-sm text-gray-500">Общи разходи</p>
+              <p className="text-xs text-gray-500">Общи разходи</p>
             </div>
           </div>
         </div>
@@ -230,8 +243,32 @@ export const ObjectDetailPage = () => {
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{invoices.length}</p>
-              <p className="text-sm text-gray-500">Фактури</p>
+              <p className="text-xl font-bold text-gray-900">{invoices.length}</p>
+              <p className="text-xs text-gray-500">Фактури</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <Landmark className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-gray-900">{bankTransactions.length}</p>
+              <p className="text-xs text-gray-500">Банкови</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 border border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Banknote className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-gray-900">{transactions.length}</p>
+              <p className="text-xs text-gray-500">Транзакции</p>
             </div>
           </div>
         </div>
@@ -242,20 +279,8 @@ export const ObjectDetailPage = () => {
               <Package className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{inventory.length}</p>
-              <p className="text-sm text-gray-500">Инвентар</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{bankTransactions.length}</p>
-              <p className="text-sm text-gray-500">Банкови плащания</p>
+              <p className="text-xl font-bold text-gray-900">{inventory.length}</p>
+              <p className="text-xs text-gray-500">Инвентар</p>
             </div>
           </div>
         </div>
@@ -297,12 +322,159 @@ export const ObjectDetailPage = () => {
         </div>
       </div>
 
-      {/* Placeholder sections for future */}
+      {/* Second row - Bank & Transactions */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Bank Transactions */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Landmark className="w-5 h-5" />
+            Банкови плащания
+          </h2>
+          {bankTransactions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Landmark className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>Няма банкови плащания за този обект</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {bankTransactions.slice(0, 5).map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                      {tx.type === 'credit' ? (
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <TrendingDown className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{tx.counterpartyName || tx.displayName || 'Банково плащане'}</p>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(tx.date).toLocaleDateString('bg-BG')}</span>
+                        {tx.invoiceRef && (
+                          <>
+                            <span>•</span>
+                            <span>Ф-ра: {tx.invoiceRef}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                      {tx.type === 'credit' ? '+' : '-'}{tx.amount.toLocaleString('bg-BG')} €
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {bankTransactions.length > 5 && (
+                <Link 
+                  to="/bank-statements"
+                  className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                >
+                  Виж всички {bankTransactions.length} плащания →
+                </Link>
+              )}
+              {/* Summary */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Общо разходи:</span>
+                  <span className="font-bold text-red-600">
+                    -{bankTransactions.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('bg-BG')} €
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-gray-500">Общо приходи:</span>
+                  <span className="font-bold text-green-600">
+                    +{bankTransactions.filter(tx => tx.type === 'credit').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('bg-BG')} €
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Cash Transactions */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Banknote className="w-5 h-5" />
+            Касови транзакции
+          </h2>
+          {transactions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Banknote className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>Няма касови транзакции за този обект</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {transactions.slice(0, 5).map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      tx.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                      {tx.type === 'income' ? (
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <TrendingDown className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{tx.description || (tx.type === 'income' ? 'Приход' : 'Разход')}</p>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(tx.date).toLocaleDateString('bg-BG')}</span>
+                        <span>•</span>
+                        <span>{tx.userName}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      {tx.type === 'income' ? '+' : '-'}{tx.amount.toLocaleString('bg-BG')} €
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {transactions.length > 5 && (
+                <Link 
+                  to="/transactions"
+                  className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                >
+                  Виж всички {transactions.length} транзакции →
+                </Link>
+              )}
+              {/* Summary */}
+              {transactions.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Общо разходи:</span>
+                    <span className="font-bold text-red-600">
+                      -{transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('bg-BG')} €
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-gray-500">Общо приходи:</span>
+                    <span className="font-bold text-green-600">
+                      +{transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('bg-BG')} €
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Third row - Invoices & Inventory */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Последни фактури
+            Фактури ({invoices.length})
           </h2>
           {invoices.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -328,7 +500,7 @@ export const ObjectDetailPage = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-gray-900">{invoice.total.toLocaleString()} €</p>
+                    <p className="font-bold text-gray-900">{invoice.total.toLocaleString('bg-BG')} €</p>
                   </div>
                 </div>
               ))}
@@ -340,6 +512,15 @@ export const ObjectDetailPage = () => {
                   Виж всички {invoices.length} фактури →
                 </Link>
               )}
+              {/* Summary */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Общо по фактури:</span>
+                  <span className="font-bold text-gray-900">
+                    {invoices.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('bg-BG')} €
+                  </span>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -347,7 +528,7 @@ export const ObjectDetailPage = () => {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Инвентар на обекта
+            Инвентар на обекта ({inventory.length})
           </h2>
           {inventory.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
