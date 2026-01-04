@@ -14,19 +14,22 @@ import {
   X,
   Wallet,
   Building2,
-  ChevronDown
+  ChevronDown,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 
 // New Transaction Modal
-interface NewTransactionModalProps {
+interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   users: User[];
   objects: ConstructionObject[];
   onSubmit: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  editTransaction?: Transaction | null;
 }
 
-const NewTransactionModal = ({ isOpen, onClose, users, objects, onSubmit }: NewTransactionModalProps) => {
+const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTransaction }: TransactionModalProps) => {
   const { user } = useAuthStore();
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [selectedUser, setSelectedUser] = useState<number>(0);
@@ -36,6 +39,28 @@ const NewTransactionModal = ({ isOpen, onClose, users, objects, onSubmit }: NewT
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editTransaction) {
+      setType(editTransaction.type);
+      setSelectedUser(editTransaction.userId || 0);
+      setSelectedObject(editTransaction.objectId || 0);
+      setAmount(String(editTransaction.amount));
+      setMethod(editTransaction.method || 'cash');
+      setDescription(editTransaction.description || '');
+      setDate(editTransaction.date);
+    } else {
+      // Reset form for new transaction
+      setType('expense');
+      setSelectedUser(0);
+      setSelectedObject(0);
+      setAmount('');
+      setMethod('cash');
+      setDescription('');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [editTransaction, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,18 +103,22 @@ const NewTransactionModal = ({ isOpen, onClose, users, objects, onSubmit }: NewT
     
     setIsSubmitting(false);
     
-    // Reset form
-    setType('expense');
-    setSelectedUser(0);
-    setSelectedObject(0);
-    setAmount('');
-    setMethod('cash');
-    setDescription('');
-    setDate(new Date().toISOString().split('T')[0]);
+    // Reset form only if not editing (editing uses useEffect)
+    if (!editTransaction) {
+      setType('expense');
+      setSelectedUser(0);
+      setSelectedObject(0);
+      setAmount('');
+      setMethod('cash');
+      setDescription('');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
     onClose();
   };
 
   if (!isOpen) return null;
+
+  const isEditing = !!editTransaction;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -97,7 +126,7 @@ const NewTransactionModal = ({ isOpen, onClose, users, objects, onSubmit }: NewT
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Wallet className="w-6 h-6 text-primary-600" />
-            Нова транзакция
+            {isEditing ? 'Редактирай транзакция' : 'Нова транзакция'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5 text-gray-500" />
@@ -289,8 +318,8 @@ const NewTransactionModal = ({ isOpen, onClose, users, objects, onSubmit }: NewT
                 <RefreshCw className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  <Plus className="w-5 h-5" />
-                  {type === 'income' ? 'Заприходи' : 'Добави разход'}
+                  {isEditing ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {isEditing ? 'Запази' : (type === 'income' ? 'Заприходи' : 'Добави разход')}
                 </>
               )}
             </button>
@@ -309,6 +338,7 @@ export const TransactionsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -353,13 +383,45 @@ export const TransactionsPage = () => {
 
   const handleCreateTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     try {
-      const response = await apiService.createTransaction(transaction);
-      if (response.success) {
-        await loadData();
+      if (editingTransaction) {
+        // Update existing transaction
+        const response = await apiService.updateTransaction(editingTransaction.id, transaction);
+        if (response.success) {
+          await loadData();
+        }
+      } else {
+        // Create new transaction
+        const response = await apiService.createTransaction(transaction);
+        if (response.success) {
+          await loadData();
+        }
       }
     } catch (error) {
-      console.error('Error creating transaction:', error);
+      console.error('Error saving transaction:', error);
     }
+  };
+
+  const handleEditTransaction = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setShowModal(true);
+  };
+
+  const handleDeleteTransaction = async (tx: Transaction) => {
+    if (confirm(`Сигурни ли сте, че искате да изтриете тази транзакция?\n${tx.description || tx.type === 'income' ? 'Заприходяване' : 'Разход'} - ${tx.amount} €`)) {
+      try {
+        const response = await apiService.deleteTransaction(tx.id);
+        if (response.success) {
+          await loadData();
+        }
+      } catch (error) {
+        console.error('Error deleting transaction:', error);
+      }
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingTransaction(null);
   };
 
   // Filter transactions
@@ -685,6 +747,26 @@ export const TransactionsPage = () => {
                       {Number(tx.amount).toLocaleString('bg-BG')} €
                     </p>
                   </div>
+
+                  {/* Edit/Delete buttons - only for directors */}
+                  {isDirector && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleEditTransaction(tx)}
+                        className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Редактирай"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTransaction(tx)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Изтрий"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -693,12 +775,13 @@ export const TransactionsPage = () => {
       </div>
 
       {/* New Transaction Modal */}
-      <NewTransactionModal
+      <TransactionModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={handleCloseModal}
         users={users}
         objects={objects}
         onSubmit={handleCreateTransaction}
+        editTransaction={editingTransaction}
       />
     </div>
   );

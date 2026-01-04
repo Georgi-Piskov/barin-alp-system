@@ -573,6 +573,50 @@ export const apiService = {
     }
   },
 
+  async updateTransaction(id: number, updates: Partial<Transaction>): Promise<ApiResponse<Transaction>> {
+    if (DEMO_MODE) {
+      return { success: true, data: { id, ...updates } as Transaction };
+    }
+
+    try {
+      const response = await api.put(
+        buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_TRANSACTION || '/transactions/update'),
+        { id, ...updates }
+      );
+      
+      console.log('Update Transaction response from n8n:', response.data);
+      
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Update Transaction error:', error);
+      return { success: false, error: 'Грешка при обновяване на транзакция' };
+    }
+  },
+
+  async deleteTransaction(id: number): Promise<ApiResponse<void>> {
+    if (DEMO_MODE) {
+      return { success: true };
+    }
+
+    try {
+      const response = await api.delete(
+        buildApiUrl(API_CONFIG.ENDPOINTS.DELETE_TRANSACTION || '/transactions/delete'),
+        { data: { id } }
+      );
+      
+      console.log('Delete Transaction response from n8n:', response.data);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Delete Transaction error:', error);
+      return { success: false, error: 'Грешка при изтриване на транзакция' };
+    }
+  },
+
   // ==================== DASHBOARD ====================
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
     if (DEMO_MODE) {
