@@ -313,17 +313,22 @@ export const DashboardPage = () => {
     );
   }
 
-  // Prepare data for charts
-  const objectsChartData = (stats?.expensesByObject || []).slice(0, 6).map((obj, idx) => ({
-    label: obj.objectName,
-    value: obj.totalExpenses,
-    color: ['bg-primary-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500'][idx % 6]
-  }));
+  // Prepare data for charts - only for directors
+  const objectsChartData = isDirector 
+    ? (stats?.expensesByObject || []).slice(0, 6).map((obj, idx) => ({
+        label: obj.objectName,
+        value: obj.totalExpenses,
+        color: ['bg-primary-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500'][idx % 6]
+      }))
+    : [];
 
   const maxObjectExpense = Math.max(...(stats?.expensesByObject || []).map(o => o.totalExpenses), 1);
 
   // Technicians for modal
   const techniciansList = stats?.technicianBalances || [];
+  
+  // Get current technician's balance (for technician view)
+  const currentTechBalance = techniciansList.find(t => t.userId === user?.id);
 
   return (
     <div className="space-y-6">
@@ -355,7 +360,7 @@ export const DashboardPage = () => {
 
       {/* Main Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Income */}
+        {/* Total Income - Directors see company total, Technicians see their own */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -363,14 +368,19 @@ export const DashboardPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {(stats?.totalIncome || 0).toLocaleString('bg-BG')} €
+                {isDirector 
+                  ? (stats?.totalIncome || 0).toLocaleString('bg-BG')
+                  : (currentTechBalance?.income || 0).toLocaleString('bg-BG')
+                } €
               </p>
-              <p className="text-sm text-gray-500">Общо заприходени</p>
+              <p className="text-sm text-gray-500">
+                {isDirector ? 'Общо заприходени' : 'Получени средства'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Total Expenses */}
+        {/* Total Expenses - Directors see company total, Technicians see their own */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
@@ -378,53 +388,67 @@ export const DashboardPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {(stats?.totalExpenses || 0).toLocaleString('bg-BG')} €
+                {isDirector 
+                  ? (stats?.totalExpenses || 0).toLocaleString('bg-BG')
+                  : (currentTechBalance?.expense || 0).toLocaleString('bg-BG')
+                } €
               </p>
-              <p className="text-sm text-gray-500">Общо разходи</p>
+              <p className="text-sm text-gray-500">
+                {isDirector ? 'Общо разходи' : 'Мои разходи'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Net Balance */}
-        <div className={`bg-white rounded-xl p-4 shadow-sm border ${
-          (stats?.netBalance || 0) >= 0 ? 'border-green-200' : 'border-red-200'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              (stats?.netBalance || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
+        {/* Net Balance - Directors see company balance, Technicians see their own */}
+        {(() => {
+          const balance = isDirector 
+            ? (stats?.netBalance || 0) 
+            : (currentTechBalance?.balance || 0);
+          return (
+            <div className={`bg-white rounded-xl p-4 shadow-sm border ${
+              balance >= 0 ? 'border-green-200' : 'border-red-200'
             }`}>
-              <Euro className={`w-6 h-6 ${
-                (stats?.netBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`} />
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  balance >= 0 ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  <Euro className={`w-6 h-6 ${
+                    balance >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`} />
+                </div>
+                <div>
+                  <p className={`text-2xl font-bold ${
+                    balance >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {balance.toLocaleString('bg-BG')} €
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {isDirector ? 'Нетен баланс' : 'Мой баланс'}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className={`text-2xl font-bold ${
-                (stats?.netBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {(stats?.netBalance || 0).toLocaleString('bg-BG')} €
-              </p>
-              <p className="text-sm text-gray-500">Нетен баланс</p>
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
-        {/* Unassigned Expenses */}
+        {/* Unassigned Expenses - Only for directors */}
         <div className={`bg-white rounded-xl p-4 shadow-sm border ${
-          (stats?.unassignedExpenses || 0) > 0 ? 'border-danger-200 bg-danger-50' : 'border-gray-100'
+          isDirector && (stats?.unassignedExpenses || 0) > 0 ? 'border-danger-200 bg-danger-50' : 'border-gray-100'
         }`}>
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              (stats?.unassignedExpenses || 0) > 0 ? 'bg-danger-100' : 'bg-gray-100'
+              isDirector && (stats?.unassignedExpenses || 0) > 0 ? 'bg-danger-100' : 'bg-gray-100'
             }`}>
               <AlertTriangle className={`w-6 h-6 ${
-                (stats?.unassignedExpenses || 0) > 0 ? 'text-danger-600' : 'text-gray-400'
+                isDirector && (stats?.unassignedExpenses || 0) > 0 ? 'text-danger-600' : 'text-gray-400'
               }`} />
             </div>
             <div>
               <p className={`text-2xl font-bold ${
-                (stats?.unassignedExpenses || 0) > 0 ? 'text-danger-600' : 'text-gray-900'
+                isDirector && (stats?.unassignedExpenses || 0) > 0 ? 'text-danger-600' : 'text-gray-900'
               }`}>
-                {(stats?.unassignedExpenses || 0).toLocaleString('bg-BG')} €
+                {isDirector ? (stats?.unassignedExpenses || 0).toLocaleString('bg-BG') : '0'} €
               </p>
               <p className="text-sm text-gray-500">Без обект</p>
             </div>
@@ -438,21 +462,21 @@ export const DashboardPage = () => {
           <Building2 className="w-8 h-8 text-primary-500" />
           <div>
             <p className="text-xl font-bold text-gray-900">{stats?.activeObjects || 0}</p>
-            <p className="text-xs text-gray-500">Активни обекти</p>
+            <p className="text-xs text-gray-500">{isDirector ? 'Активни обекти' : 'Мои обекти'}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
           <Receipt className="w-8 h-8 text-blue-500" />
           <div>
             <p className="text-xl font-bold text-gray-900">{stats?.totalInvoices || 0}</p>
-            <p className="text-xs text-gray-500">Фактури</p>
+            <p className="text-xs text-gray-500">{isDirector ? 'Фактури' : 'Мои фактури'}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
           <Users className="w-8 h-8 text-green-500" />
           <div>
-            <p className="text-xl font-bold text-gray-900">{techniciansList.length}</p>
-            <p className="text-xs text-gray-500">Техници</p>
+            <p className="text-xl font-bold text-gray-900">{isDirector ? techniciansList.length : 1}</p>
+            <p className="text-xs text-gray-500">{isDirector ? 'Техници' : 'Техник'}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
@@ -489,19 +513,19 @@ export const DashboardPage = () => {
       )}
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Technician Balances */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div 
-            className="p-4 border-b border-gray-100 flex items-center justify-between cursor-pointer"
-            onClick={() => toggleSection('technicians')}
-          >
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary-500" />
-              Баланси на техници
-            </h2>
-            <div className="flex items-center gap-2">
-              {isDirector && (
+      <div className={`grid ${isDirector ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-6`}>
+        {/* Technician Balances - Only for Directors */}
+        {isDirector && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div 
+              className="p-4 border-b border-gray-100 flex items-center justify-between cursor-pointer"
+              onClick={() => toggleSection('technicians')}
+            >
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary-500" />
+                Баланси на техници
+              </h2>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -512,97 +536,99 @@ export const DashboardPage = () => {
                   <PlusCircle className="w-4 h-4" />
                   Заприходи
                 </button>
-              )}
-              {expandedSections.technicians ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
+                {expandedSections.technicians ? (
+                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                )}
+              </div>
             </div>
-          </div>
-          
-          {expandedSections.technicians && (
-            <div className="divide-y divide-gray-100">
-              {techniciansList.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>Няма техници</p>
-                </div>
-              ) : (
-                techniciansList.map((tech) => (
-                  <div key={tech.userId} className="p-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">{tech.userName}</span>
-                      <span className={`text-lg font-bold ${
-                        tech.balance >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {tech.balance.toLocaleString('bg-BG')} €
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-green-600">
-                        ↑ {tech.income.toLocaleString('bg-BG')} €
-                      </span>
-                      <span className="text-red-600">
-                        ↓ {tech.expense.toLocaleString('bg-BG')} €
-                      </span>
-                    </div>
-                    {/* Balance bar */}
-                    <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      {tech.income > 0 && (
-                        <div 
-                          className={`h-full ${tech.balance >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                          style={{ width: `${Math.min((tech.expense / tech.income) * 100, 100)}%` }}
-                        />
-                      )}
-                    </div>
+            
+            {expandedSections.technicians && (
+              <div className="divide-y divide-gray-100">
+                {techniciansList.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Няма техници</p>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Expenses by Object */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div 
-            className="p-4 border-b border-gray-100 flex items-center justify-between cursor-pointer"
-            onClick={() => toggleSection('objects')}
-          >
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary-500" />
-              Разходи по обекти
-            </h2>
-            <div className="flex items-center gap-2">
-              <Link 
-                to="/objects"
-                onClick={(e) => e.stopPropagation()}
-                className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
-              >
-                Виж всички
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              {expandedSections.objects ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </div>
+                ) : (
+                  techniciansList.map((tech) => (
+                    <div key={tech.userId} className="p-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-900">{tech.userName}</span>
+                        <span className={`text-lg font-bold ${
+                          tech.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {tech.balance.toLocaleString('bg-BG')} €
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-green-600">
+                          ↑ {tech.income.toLocaleString('bg-BG')} €
+                        </span>
+                        <span className="text-red-600">
+                          ↓ {tech.expense.toLocaleString('bg-BG')} €
+                        </span>
+                      </div>
+                      {/* Balance bar */}
+                      <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        {tech.income > 0 && (
+                          <div 
+                            className={`h-full ${tech.balance >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                            style={{ width: `${Math.min((tech.expense / tech.income) * 100, 100)}%` }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
-          
-          {expandedSections.objects && (
-            <div className="p-4">
-              {objectsChartData.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>Няма разходи по обекти</p>
-                </div>
-              ) : (
-                <BarChart data={objectsChartData} maxValue={maxObjectExpense} />
-              )}
+        )}
+
+        {/* Expenses by Object - Only for Directors */}
+        {isDirector && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div 
+              className="p-4 border-b border-gray-100 flex items-center justify-between cursor-pointer"
+              onClick={() => toggleSection('objects')}
+            >
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-primary-500" />
+                Разходи по обекти
+              </h2>
+              <div className="flex items-center gap-2">
+                <Link 
+                  to="/objects"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
+                >
+                  Виж всички
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                {expandedSections.objects ? (
+                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                )}
+              </div>
             </div>
-          )}
-        </div>
+            
+            {expandedSections.objects && (
+              <div className="p-4">
+                {objectsChartData.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Няма разходи по обекти</p>
+                  </div>
+                ) : (
+                  <BarChart data={objectsChartData} maxValue={maxObjectExpense} />
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Recent Transactions */}

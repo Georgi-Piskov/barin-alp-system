@@ -58,7 +58,19 @@ export const ObjectDetailPage = () => {
       const result = await apiService.getObjectDetails(Number(id));
       
       if (result.success && result.data) {
-        setObject(result.data.object || null);
+        const loadedObject = result.data.object || null;
+        
+        // Security check: Technicians can only view objects they are assigned to
+        if (!isDirector && loadedObject) {
+          const isAssigned = loadedObject.assignedTechnicians?.includes(user?.id as number);
+          if (!isAssigned) {
+            console.warn('Access denied: User not assigned to this object');
+            navigate('/objects');
+            return;
+          }
+        }
+        
+        setObject(loadedObject);
         setTechnicians(result.data.technicians || []);
         setInvoices(result.data.invoices || []);
         setInventory(result.data.inventory || []);
@@ -194,24 +206,27 @@ export const ObjectDetailPage = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-gray-900">
-                {(
-                  invoices.reduce((sum, inv) => sum + inv.total, 0) + 
-                  bankTransactions.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0) +
-                  transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
-                ).toLocaleString('bg-BG')} €
-              </p>
-              <p className="text-xs text-gray-500">Общи разходи</p>
+      <div className={`grid grid-cols-2 ${isDirector ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} gap-4`}>
+        {/* Total Expenses - Only for Directors */}
+        {isDirector && (
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-gray-900">
+                  {(
+                    invoices.reduce((sum, inv) => sum + inv.total, 0) + 
+                    bankTransactions.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0) +
+                    transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
+                  ).toLocaleString('bg-BG')} €
+                </p>
+                <p className="text-xs text-gray-500">Общи разходи</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <div className="flex items-center gap-3">
@@ -219,35 +234,41 @@ export const ObjectDetailPage = () => {
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{invoices.length}</p>
-              <p className="text-xs text-gray-500">Фактури</p>
+              <p className="text-xl font-bold text-gray-900">{isDirector ? invoices.length : invoices.filter(inv => inv.createdBy === user?.id).length}</p>
+              <p className="text-xs text-gray-500">{isDirector ? 'Фактури' : 'Мои фактури'}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <Landmark className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-gray-900">{bankTransactions.length}</p>
-              <p className="text-xs text-gray-500">Банкови</p>
+        {/* Bank Transactions - Only for Directors */}
+        {isDirector && (
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Landmark className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-gray-900">{bankTransactions.length}</p>
+                <p className="text-xs text-gray-500">Банкови</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Banknote className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-gray-900">{transactions.length}</p>
-              <p className="text-xs text-gray-500">Транзакции</p>
+        {/* Cash Transactions - Only for Directors */}
+        {isDirector && (
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Banknote className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-gray-900">{transactions.length}</p>
+                <p className="text-xs text-gray-500">Транзакции</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <div className="flex items-center gap-3">
@@ -298,65 +319,66 @@ export const ObjectDetailPage = () => {
         </div>
       </div>
 
-      {/* Second row - Bank & Transactions */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Bank Transactions */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Landmark className="w-5 h-5" />
-            Банкови плащания
-          </h2>
-          {bankTransactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Landmark className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p>Няма банкови плащания за този обект</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {bankTransactions.slice(0, 5).map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {tx.type === 'credit' ? (
-                        <TrendingUp className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <TrendingDown className="w-5 h-5 text-red-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{tx.counterpartyName || tx.displayName || 'Банково плащане'}</p>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar className="w-3 h-3" />
-                        <span>{new Date(tx.date).toLocaleDateString('bg-BG')}</span>
-                        {tx.invoiceRef && (
-                          <>
-                            <span>•</span>
-                            <span>Ф-ра: {tx.invoiceRef}</span>
-                          </>
+      {/* Second row - Bank & Transactions - Only for Directors */}
+      {isDirector && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Bank Transactions */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Landmark className="w-5 h-5" />
+              Банкови плащания
+            </h2>
+            {bankTransactions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Landmark className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                <p>Няма банкови плащания за този обект</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {bankTransactions.slice(0, 5).map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {tx.type === 'credit' ? (
+                          <TrendingUp className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <TrendingDown className="w-5 h-5 text-red-600" />
                         )}
                       </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{tx.counterpartyName || tx.displayName || 'Банково плащане'}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(tx.date).toLocaleDateString('bg-BG')}</span>
+                          {tx.invoiceRef && (
+                            <>
+                              <span>•</span>
+                              <span>Ф-ра: {tx.invoiceRef}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.type === 'credit' ? '+' : '-'}{tx.amount.toLocaleString('bg-BG')} €
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-bold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.type === 'credit' ? '+' : '-'}{tx.amount.toLocaleString('bg-BG')} €
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {bankTransactions.length > 5 && (
-                <Link 
-                  to="/bank-statements"
-                  className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
-                >
-                  Виж всички {bankTransactions.length} плащания →
-                </Link>
-              )}
-              {/* Summary */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex justify-between text-sm">
+                ))}
+                {bankTransactions.length > 5 && (
+                  <Link 
+                    to="/bank-statements"
+                    className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                  >
+                    Виж всички {bankTransactions.length} плащания →
+                  </Link>
+                )}
+                {/* Summary */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Общо разходи:</span>
                   <span className="font-bold text-red-600">
                     -{bankTransactions.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('bg-BG')} €
@@ -444,63 +466,73 @@ export const ObjectDetailPage = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* Third row - Invoices & Inventory */}
       <div className="grid lg:grid-cols-2 gap-6">
+        {/* Invoices */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Фактури ({invoices.length})
+            {isDirector ? `Фактури (${invoices.length})` : `Мои фактури (${invoices.filter(inv => inv.createdBy === user?.id).length})`}
           </h2>
-          {invoices.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p>Няма фактури за този обект</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {invoices.slice(0, 5).map((invoice) => (
-                <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{invoice.supplier}</p>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar className="w-3 h-3" />
-                        <span>{new Date(invoice.date).toLocaleDateString('bg-BG')}</span>
-                        <span>•</span>
-                        <span>{invoice.invoiceNumber}</span>
+          {(() => {
+            const displayInvoices = isDirector ? invoices : invoices.filter(inv => inv.createdBy === user?.id);
+            if (displayInvoices.length === 0) {
+              return (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>Няма фактури за този обект</p>
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-3">
+                {displayInvoices.slice(0, 5).map((invoice) => (
+                  <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{invoice.supplier}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(invoice.date).toLocaleDateString('bg-BG')}</span>
+                          <span>•</span>
+                          <span>{invoice.invoiceNumber}</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">{invoice.total.toLocaleString('bg-BG')} €</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900">{invoice.total.toLocaleString('bg-BG')} €</p>
+                ))}
+                {displayInvoices.length > 5 && (
+                  <Link 
+                    to="/invoices"
+                    className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                  >
+                    Виж всички {displayInvoices.length} фактури →
+                  </Link>
+                )}
+                {isDirector && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Общо по фактури:</span>
+                      <span className="font-bold text-gray-900">
+                        {displayInvoices.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('bg-BG')} €
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {invoices.length > 5 && (
-                <Link 
-                  to="/invoices"
-                  className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
-                >
-                  Виж всички {invoices.length} фактури →
-                </Link>
-              )}
-              {/* Summary */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Общо по фактури:</span>
-                  <span className="font-bold text-gray-900">
-                    {invoices.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('bg-BG')} €
-                  </span>
-                </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
+        {/* Inventory */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Package className="w-5 h-5" />

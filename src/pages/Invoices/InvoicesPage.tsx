@@ -100,6 +100,14 @@ export const InvoicesPage = () => {
   const filterInvoices = () => {
     let filtered = [...invoices];
     
+    // Technicians can only see invoices for their objects or created by them
+    if (!isDirector) {
+      const myObjectIds = objects.map(o => o.id);
+      filtered = filtered.filter(
+        inv => inv.createdBy === user?.id || myObjectIds.includes(inv.objectId as number)
+      );
+    }
+    
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -119,8 +127,8 @@ export const InvoicesPage = () => {
       }
     }
     
-    // Problematic filter (unassigned)
-    if (showProblematic) {
+    // Problematic filter (unassigned) - only for directors
+    if (isDirector && showProblematic) {
       filtered = filtered.filter(inv => !inv.objectId);
     }
     
@@ -194,7 +202,7 @@ export const InvoicesPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Фактури</h1>
-          <p className="text-gray-500">Управление на фактури и разходи</p>
+          <p className="text-gray-500">{isDirector ? 'Управление на фактури и разходи' : 'Моите фактури и разходи'}</p>
         </div>
         <button 
           onClick={handleCreate}

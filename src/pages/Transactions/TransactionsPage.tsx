@@ -364,6 +364,9 @@ export const TransactionsPage = () => {
 
   // Filter transactions
   const filteredTransactions = transactions.filter(tx => {
+    // Technicians can only see their own transactions
+    if (!isDirector && tx.userId !== user?.id) return false;
+    
     // Search filter
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -377,8 +380,8 @@ export const TransactionsPage = () => {
     // Type filter
     if (filterType !== 'all' && tx.type !== filterType) return false;
     
-    // User filter
-    if (filterUser && tx.userId !== filterUser) return false;
+    // User filter (only for directors)
+    if (isDirector && filterUser && tx.userId !== filterUser) return false;
     
     // Date filters
     if (dateFrom && tx.date < dateFrom) return false;
@@ -422,7 +425,7 @@ export const TransactionsPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Транзакции</h1>
-          <p className="text-gray-500">Всички заприходявания и разходи</p>
+          <p className="text-gray-500">{isDirector ? 'Всички заприходявания и разходи' : 'Моите заприходявания и разходи'}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -547,20 +550,22 @@ export const TransactionsPage = () => {
               </select>
             </div>
             
-            {/* User Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Техник</label>
-              <select
-                value={filterUser}
-                onChange={(e) => setFilterUser(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500"
-              >
-                <option value={0}>Всички</option>
-                {users.filter(u => u.role === 'technician').map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* User Filter - Only for Directors */}
+            {isDirector && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Техник</label>
+                <select
+                  value={filterUser}
+                  onChange={(e) => setFilterUser(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value={0}>Всички</option>
+                  {users.filter(u => u.role === 'technician').map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             
             {/* Date From */}
             <div>
