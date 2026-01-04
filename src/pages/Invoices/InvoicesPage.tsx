@@ -218,7 +218,7 @@ export const InvoicesPage = () => {
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{invoices.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{filteredInvoices.length}</p>
               <p className="text-sm text-gray-500">Общо фактури</p>
             </div>
           </div>
