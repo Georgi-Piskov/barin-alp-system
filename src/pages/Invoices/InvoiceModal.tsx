@@ -73,10 +73,16 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
     setIsLoadingObjects(false);
   };
 
-  // Calculate total from items
+  // Calculate total from items (without VAT)
   const calculateTotal = () => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
   };
+
+  // Calculate VAT (20%)
+  const VAT_RATE = 0.20;
+  const totalWithoutVat = calculateTotal();
+  const vatAmount = totalWithoutVat * VAT_RATE;
+  const totalWithVat = totalWithoutVat + vatAmount;
 
   // Add new item
   const addItem = () => {
@@ -115,7 +121,6 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
     setIsSaving(true);
     
     const selectedObject = objects.find(o => o.id === formData.objectId);
-    const total = calculateTotal();
     
     // Filter out empty items
     const validItems = items.filter(item => item.name.trim() !== '');
@@ -129,7 +134,9 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
     try {
       await onSave({
         ...formData,
-        total,
+        total: totalWithVat, // Save total with VAT
+        totalWithoutVat: totalWithoutVat, // Also save without VAT for reference
+        vatAmount: vatAmount,
         items: validItems,
         createdBy: user?.id || 0,
         createdByName: user?.name || '',
@@ -245,7 +252,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                 <div className="col-span-4">Наименование</div>
                 <div className="col-span-2">Мярка</div>
                 <div className="col-span-2">К-во</div>
-                <div className="col-span-2">Ед. цена €</div>
+                <div className="col-span-2">Ед. цена без ДДС</div>
                 <div className="col-span-1 text-right">Сума</div>
                 <div className="col-span-1"></div>
               </div>
@@ -303,11 +310,25 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
             </div>
             
             {/* Total */}
-            <div className="flex justify-end items-center gap-4 pt-2 border-t border-gray-200">
-              <span className="text-sm font-medium text-gray-600">Обща сума:</span>
-              <span className="text-xl font-bold text-primary-600">
-                {calculateTotal().toFixed(2)} €
-              </span>
+            <div className="pt-3 border-t border-gray-200 space-y-2">
+              <div className="flex justify-end items-center gap-4">
+                <span className="text-sm text-gray-500">Сума без ДДС:</span>
+                <span className="text-base font-semibold text-gray-700 w-28 text-right">
+                  {totalWithoutVat.toFixed(2)} €
+                </span>
+              </div>
+              <div className="flex justify-end items-center gap-4">
+                <span className="text-sm text-gray-500">ДДС (20%):</span>
+                <span className="text-base font-semibold text-gray-700 w-28 text-right">
+                  {vatAmount.toFixed(2)} €
+                </span>
+              </div>
+              <div className="flex justify-end items-center gap-4 pt-2 border-t border-gray-300">
+                <span className="text-sm font-medium text-gray-700">Обща сума с ДДС:</span>
+                <span className="text-xl font-bold text-primary-600 w-28 text-right">
+                  {totalWithVat.toFixed(2)} €
+                </span>
+              </div>
             </div>
           </div>
 

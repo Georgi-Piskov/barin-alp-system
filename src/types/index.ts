@@ -38,7 +38,9 @@ export interface Invoice {
   date: string;
   supplier: string;
   invoiceNumber: string;
-  total: number;
+  total: number;           // Сума с ДДС
+  totalWithoutVat?: number; // Сума без ДДС
+  vatAmount?: number;       // Сума на ДДС
   description: string;
   items: InvoiceItem[]; // Списък с артикули
   createdBy: number;
