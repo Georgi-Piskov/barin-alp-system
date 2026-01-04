@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { DashboardStats, Transaction } from '../../types';
+import { DashboardStats, Transaction, Invoice, InventoryItem } from '../../types';
 import { 
   Building2, 
   TrendingDown,
@@ -243,6 +243,11 @@ export const DashboardPage = () => {
     objects: true,
     transactions: false,
   });
+  
+  // For technicians - their own data
+  const [myInvoices, setMyInvoices] = useState<Invoice[]>([]);
+  const [myInventory, setMyInventory] = useState<InventoryItem[]>([]);
+  const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
 
   const isDirector = user?.role === 'director';
 
@@ -259,6 +264,30 @@ export const DashboardPage = () => {
       
       if (response.success && response.data) {
         setStats(response.data);
+      }
+      
+      // For technicians, load their own data
+      if (!isDirector && user) {
+        // Load my invoices
+        const invoicesRes = await apiService.getInvoices();
+        if (invoicesRes.success && invoicesRes.data) {
+          const myInv = invoicesRes.data.filter(inv => inv.createdBy === user.id);
+          setMyInvoices(myInv);
+        }
+        
+        // Load my inventory
+        const inventoryRes = await apiService.getInventory();
+        if (inventoryRes.success && inventoryRes.data) {
+          const myInv = inventoryRes.data.filter(item => item.assignedTo === user.id);
+          setMyInventory(myInv);
+        }
+        
+        // Load my transactions
+        const transactionsRes = await apiService.getTransactions();
+        if (transactionsRes.success && transactionsRes.data) {
+          const myTx = transactionsRes.data.filter(tx => tx.userId === user.id);
+          setMyTransactions(myTx);
+        }
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -329,6 +358,13 @@ export const DashboardPage = () => {
   
   // Get current technician's balance (for technician view)
   const currentTechBalance = techniciansList.find(t => t.userId === user?.id);
+  
+  // Calculate technician's expenses from their invoices
+  const myInvoicesTotal = myInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const myTransactionsExpenses = myTransactions
+    .filter(tx => tx.type === 'expense')
+    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  const myTotalExpenses = myInvoicesTotal + myTransactionsExpenses;
 
   return (
     <div className="space-y-6">
@@ -380,7 +416,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Total Expenses - Directors see company total, Technicians see their own */}
+        {/* Total Expenses - Directors see company total, Technicians see their invoices + transactions */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
@@ -390,7 +426,7 @@ export const DashboardPage = () => {
               <p className="text-2xl font-bold text-gray-900">
                 {isDirector 
                   ? (stats?.totalExpenses || 0).toLocaleString('bg-BG')
-                  : (currentTechBalance?.expense || 0).toLocaleString('bg-BG')
+                  : myTotalExpenses.toLocaleString('bg-BG')
                 } €
               </p>
               <p className="text-sm text-gray-500">
@@ -402,9 +438,10 @@ export const DashboardPage = () => {
 
         {/* Net Balance - Directors see company balance, Technicians see their own */}
         {(() => {
+          const techIncome = currentTechBalance?.income || 0;
           const balance = isDirector 
             ? (stats?.netBalance || 0) 
-            : (currentTechBalance?.balance || 0);
+            : (techIncome - myTotalExpenses);
           return (
             <div className={`bg-white rounded-xl p-4 shadow-sm border ${
               balance >= 0 ? 'border-green-200' : 'border-red-200'
@@ -468,7 +505,9 @@ export const DashboardPage = () => {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
           <Receipt className="w-8 h-8 text-blue-500" />
           <div>
-            <p className="text-xl font-bold text-gray-900">{stats?.totalInvoices || 0}</p>
+            <p className="text-xl font-bold text-gray-900">
+              {isDirector ? (stats?.totalInvoices || 0) : myInvoices.length}
+            </p>
             <p className="text-xs text-gray-500">{isDirector ? 'Фактури' : 'Мои фактури'}</p>
           </div>
         </div>
@@ -482,8 +521,10 @@ export const DashboardPage = () => {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
           <Package className="w-8 h-8 text-purple-500" />
           <div>
-            <p className="text-xl font-bold text-gray-900">{stats?.inventoryCount || 0}</p>
-            <p className="text-xs text-gray-500">Инвентар</p>
+            <p className="text-xl font-bold text-gray-900">
+              {isDirector ? (stats?.inventoryCount || 0) : myInventory.length}
+            </p>
+            <p className="text-xs text-gray-500">{isDirector ? 'Инвентар' : 'Мой инвентар'}</p>
           </div>
         </div>
       </div>
@@ -660,13 +701,22 @@ export const DashboardPage = () => {
         
         {expandedSections.transactions && (
           <div className="divide-y divide-gray-100">
-            {(stats?.recentTransactions || []).length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Receipt className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>Няма транзакции</p>
-              </div>
-            ) : (
-              (stats?.recentTransactions || []).map((tx: any) => (
+            {(() => {
+              // For technicians, show only their transactions
+              const transactionsToShow = isDirector 
+                ? (stats?.recentTransactions || [])
+                : myTransactions.slice(0, 5);
+              
+              if (transactionsToShow.length === 0) {
+                return (
+                  <div className="p-8 text-center text-gray-500">
+                    <Receipt className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Няма транзакции</p>
+                  </div>
+                );
+              }
+              
+              return transactionsToShow.map((tx: any) => (
                 <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -692,8 +742,8 @@ export const DashboardPage = () => {
                     <p className="text-xs text-gray-400">{tx.date}</p>
                   </div>
                 </div>
-              ))
-            )}
+              ));
+            })()}
           </div>
         )}
       </div>
