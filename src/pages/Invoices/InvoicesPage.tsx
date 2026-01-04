@@ -100,12 +100,9 @@ export const InvoicesPage = () => {
   const filterInvoices = () => {
     let filtered = [...invoices];
     
-    // Technicians can only see invoices for their objects or created by them
+    // Technicians can only see invoices THEY created (not other invoices for their objects)
     if (!isDirector) {
-      const myObjectIds = objects.map(o => o.id);
-      filtered = filtered.filter(
-        inv => inv.createdBy === user?.id || myObjectIds.includes(inv.objectId as number)
-      );
+      filtered = filtered.filter(inv => inv.createdBy === user?.id);
     }
     
     // Search filter
