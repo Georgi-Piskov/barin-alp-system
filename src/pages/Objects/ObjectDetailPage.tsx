@@ -101,8 +101,11 @@ export const ObjectDetailPage = () => {
 
   const handleSave = async (objectData: Omit<ConstructionObject, 'id'>) => {
     if (object) {
+      console.log('Saving object data:', objectData);
       const response = await apiService.updateObject(object.id, objectData);
+      console.log('Update response:', response);
       if (response.success && response.data) {
+        console.log('Setting object to:', response.data);
         setObject(response.data);
       }
     }

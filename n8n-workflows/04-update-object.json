@@ -40,7 +40,8 @@
             "STATUS": "={{ $json.body.status }}",
             "totalExpenses": "={{ $json.body.totalExpenses }}",
             "assignedTechnicians": "={{ $json.body.assignedTechnicians ? $json.body.assignedTechnicians.join(',') : '' }}"
-          }
+          },
+          "matchingColumns": ["ID"]
         },
         "options": {
           "cellFormat": "USER_ENTERED"
