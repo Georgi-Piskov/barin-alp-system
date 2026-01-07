@@ -227,7 +227,7 @@ export const ObjectDetailPage = () => {
               </div>
               <div>
                 <p className="text-xl font-bold text-green-600">
-                  {incomes.reduce((sum, inc) => sum + inc.amount, 0).toLocaleString('bg-BG')} лв
+                  {incomes.reduce((sum, inc) => sum + inc.amount, 0).toLocaleString('bg-BG')} €
                 </p>
                 <p className="text-xs text-gray-500">Приходи</p>
               </div>
@@ -248,7 +248,7 @@ export const ObjectDetailPage = () => {
                     invoices.reduce((sum, inv) => sum + inv.total, 0) + 
                     bankTransactions.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0) +
                     transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0)
-                  ).toLocaleString('bg-BG')} лв
+                  ).toLocaleString('bg-BG')} €
                 </p>
                 <p className="text-xs text-gray-500">Разходи</p>
               </div>
@@ -357,7 +357,7 @@ export const ObjectDetailPage = () => {
                 Приходи ({incomes.length})
               </h2>
               <span className="text-lg font-bold text-green-600">
-                +{incomes.reduce((sum, inc) => sum + inc.amount, 0).toLocaleString('bg-BG')} лв
+                +{incomes.reduce((sum, inc) => sum + inc.amount, 0).toLocaleString('bg-BG')} €
               </span>
             </div>
           </div>
@@ -386,7 +386,7 @@ export const ObjectDetailPage = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-green-600">
-                      +{income.amount.toLocaleString('bg-BG')} лв
+                      +{income.amount.toLocaleString('bg-BG')} €
                     </p>
                   </div>
                 </div>

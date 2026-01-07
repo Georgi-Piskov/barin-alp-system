@@ -436,7 +436,7 @@ export const BankStatementsPage = () => {
                 </div>
                 <div>
                   <p className="text-lg font-bold text-red-600">
-                    -{stats.totalDebit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                    -{stats.totalDebit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                   </p>
                   <p className="text-sm text-gray-500">Разходи</p>
                 </div>
@@ -450,7 +450,7 @@ export const BankStatementsPage = () => {
                 </div>
                 <div>
                   <p className="text-lg font-bold text-green-600">
-                    +{stats.totalCredit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                    +{stats.totalCredit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                   </p>
                   <p className="text-sm text-gray-500">Приходи</p>
                 </div>
@@ -466,7 +466,7 @@ export const BankStatementsPage = () => {
                 </div>
                 <div>
                   <p className={`text-lg font-bold ${stats.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {stats.netChange >= 0 ? '+' : ''}{stats.netChange.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                    {stats.netChange >= 0 ? '+' : ''}{stats.netChange.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                   </p>
                   <p className="text-sm text-gray-500">Промяна</p>
                 </div>
@@ -504,7 +504,7 @@ export const BankStatementsPage = () => {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className={`font-bold ${categoryTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {categoryTotal >= 0 ? '+' : ''}{categoryTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                        {categoryTotal >= 0 ? '+' : ''}{categoryTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                       </span>
                       {isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-gray-400" />
@@ -607,7 +607,7 @@ export const BankStatementsPage = () => {
                                   tx.type === 'credit' ? 'text-green-600' : 'text-red-600'
                                 }`}>
                                   {tx.type === 'credit' ? '+' : '-'}
-                                  {tx.amount.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                                  {tx.amount.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                                 </p>
                               </div>
                             </div>
@@ -631,19 +631,19 @@ export const BankStatementsPage = () => {
                   <div>
                     <span className="text-blue-700">Изтеглени в брой:</span>
                     <span className="ml-2 font-medium text-green-700">
-                      {stats.cashWithdrawalTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                      {stats.cashWithdrawalTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>
                     <span className="text-blue-700">Банкови такси:</span>
                     <span className="ml-2 font-medium text-blue-900">
-                      {stats.bankFeesTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                      {stats.bankFeesTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>
                     <span className="text-blue-700">Погасяване кредит:</span>
                     <span className="ml-2 font-medium text-blue-900">
-                      {stats.loanPaymentsTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                      {stats.loanPaymentsTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>
@@ -652,7 +652,7 @@ export const BankStatementsPage = () => {
                       {groupedTransactions.transfer
                         .filter(tx => tx.type === 'debit')
                         .reduce((sum, tx) => sum + tx.amount, 0)
-                        .toLocaleString('bg-BG', { minimumFractionDigits: 2 })} лв
+                        .toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>

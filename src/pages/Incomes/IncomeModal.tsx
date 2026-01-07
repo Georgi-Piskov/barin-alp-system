@@ -167,7 +167,7 @@ export const IncomeModal: React.FC<IncomeModalProps> = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               <TrendingUp className="h-4 w-4 inline mr-1" />
-              Сума (лв.)
+              Сума (€)
             </label>
             <input
               type="number"

@@ -126,7 +126,7 @@ export const IncomesPage = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('bg-BG', {
       style: 'currency',
-      currency: 'BGN'
+      currency: 'EUR'
     }).format(amount);
   };
 
