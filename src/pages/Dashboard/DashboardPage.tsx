@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { DashboardStats, Transaction, Invoice, InventoryItem, Income } from '../../types';
+import { DashboardStats, Transaction, Invoice, Income } from '../../types';
 import { 
   Building2, 
   TrendingDown,
@@ -246,7 +246,6 @@ export const DashboardPage = () => {
   
   // For technicians - their own data
   const [myInvoices, setMyInvoices] = useState<Invoice[]>([]);
-  const [myInventory, setMyInventory] = useState<InventoryItem[]>([]);
   const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
   
   // Object incomes (for total incomes display)
@@ -276,13 +275,6 @@ export const DashboardPage = () => {
         if (invoicesRes.success && invoicesRes.data) {
           const myInv = invoicesRes.data.filter(inv => inv.createdBy === user.id);
           setMyInvoices(myInv);
-        }
-        
-        // Load my inventory
-        const inventoryRes = await apiService.getInventory();
-        if (inventoryRes.success && inventoryRes.data) {
-          const myInv = inventoryRes.data.filter(item => item.assignedTo === user.id);
-          setMyInventory(myInv);
         }
         
         // Load my transactions
