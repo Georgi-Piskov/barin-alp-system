@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { DashboardStats, Transaction, Invoice, InventoryItem } from '../../types';
+import { DashboardStats, Transaction, Invoice, InventoryItem, Income } from '../../types';
 import { 
   Building2, 
   TrendingDown,
   TrendingUp,
   AlertTriangle,
-  Package,
   ArrowRight,
   Users,
-  Receipt,
   Wallet,
   PlusCircle,
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Euro
+  Euro,
+  Receipt,
+  Package
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -248,6 +248,9 @@ export const DashboardPage = () => {
   const [myInvoices, setMyInvoices] = useState<Invoice[]>([]);
   const [myInventory, setMyInventory] = useState<InventoryItem[]>([]);
   const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
+  
+  // Object incomes (for total incomes display)
+  const [objectIncomes, setObjectIncomes] = useState<Income[]>([]);
 
   const isDirector = user?.role === 'director';
 
@@ -287,6 +290,14 @@ export const DashboardPage = () => {
         if (transactionsRes.success && transactionsRes.data) {
           const myTx = transactionsRes.data.filter(tx => tx.userId === user.id);
           setMyTransactions(myTx);
+        }
+      }
+      
+      // Load object incomes for directors
+      if (isDirector) {
+        const incomesRes = await apiService.getIncomes();
+        if (incomesRes.success && incomesRes.data) {
+          setObjectIncomes(incomesRes.data);
         }
       }
     } catch (error) {
@@ -396,21 +407,21 @@ export const DashboardPage = () => {
 
       {/* Main Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Income - Directors see company total, Technicians see their own */}
+        {/* Total Object Incomes - Directors see incomes from objects */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-green-600">
                 {isDirector 
-                  ? (stats?.totalIncome || 0).toLocaleString('bg-BG')
+                  ? objectIncomes.reduce((sum, inc) => sum + inc.amount, 0).toLocaleString('bg-BG')
                   : (currentTechBalance?.income || 0).toLocaleString('bg-BG')
                 } €
               </p>
               <p className="text-sm text-gray-500">
-                {isDirector ? 'Общо заприходени' : 'Получени средства'}
+                {isDirector ? 'Общо приходи' : 'Получени средства'}
               </p>
             </div>
           </div>
@@ -436,11 +447,13 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Net Balance - Directors see company balance, Technicians see their own */}
+        {/* Net Balance - Directors see company balance (incomes - expenses), Technicians see their own */}
         {(() => {
           const techIncome = currentTechBalance?.income || 0;
+          const totalObjectIncomes = objectIncomes.reduce((sum, inc) => sum + inc.amount, 0);
+          const totalExpenses = stats?.totalExpenses || 0;
           const balance = isDirector 
-            ? (stats?.netBalance || 0) 
+            ? (totalObjectIncomes - totalExpenses) 
             : (techIncome - myTotalExpenses);
           return (
             <div className={`bg-white rounded-xl p-4 shadow-sm border ${
@@ -494,7 +507,8 @@ export const DashboardPage = () => {
       </div>
 
       {/* Secondary Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Secondary Stats - Only objects and technicians count */}
+      <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
           <Building2 className="w-8 h-8 text-primary-500" />
           <div>
@@ -503,28 +517,10 @@ export const DashboardPage = () => {
           </div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-          <Receipt className="w-8 h-8 text-blue-500" />
-          <div>
-            <p className="text-xl font-bold text-gray-900">
-              {isDirector ? (stats?.totalInvoices || 0) : myInvoices.length}
-            </p>
-            <p className="text-xs text-gray-500">{isDirector ? 'Фактури' : 'Мои фактури'}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
           <Users className="w-8 h-8 text-green-500" />
           <div>
             <p className="text-xl font-bold text-gray-900">{isDirector ? techniciansList.length : 1}</p>
             <p className="text-xs text-gray-500">{isDirector ? 'Техници' : 'Техник'}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
-          <Package className="w-8 h-8 text-purple-500" />
-          <div>
-            <p className="text-xl font-bold text-gray-900">
-              {isDirector ? (stats?.inventoryCount || 0) : myInventory.length}
-            </p>
-            <p className="text-xs text-gray-500">{isDirector ? 'Инвентар' : 'Мой инвентар'}</p>
           </div>
         </div>
       </div>
