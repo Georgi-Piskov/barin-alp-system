@@ -24,6 +24,7 @@ import { IncomeModal } from '../Incomes/IncomeModal';
 export const BankStatementsPage = () => {
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
@@ -72,7 +73,6 @@ export const BankStatementsPage = () => {
   // Load saved bank transactions on mount
   useEffect(() => {
     const loadSavedTransactions = async () => {
-      setIsLoading(true);
       try {
         const response = await apiService.getBankTransactions();
         console.log('Bank transactions response:', response);
@@ -113,9 +113,10 @@ export const BankStatementsPage = () => {
         }
       } catch (err) {
         console.error('Error loading bank transactions:', err);
-        setError('Грешка при зареждане на банкови транзакции');
+        // Don't set error on initial load - just log it
+      } finally {
+        setIsInitialLoading(false);
       }
-      setIsLoading(false);
     };
     loadSavedTransactions();
   }, []);
@@ -345,6 +346,17 @@ export const BankStatementsPage = () => {
           <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-danger-500" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">Достъпът е ограничен</h2>
           <p className="text-gray-500">Само директорите могат да виждат банкови извлечения</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isInitialLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 mx-auto mb-4 text-primary-500 animate-spin" />
+          <p className="text-gray-500">Зареждане...</p>
         </div>
       </div>
     );
