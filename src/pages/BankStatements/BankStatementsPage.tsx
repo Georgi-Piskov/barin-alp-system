@@ -15,12 +15,9 @@ import {
   Search,
   Building2,
   Landmark,
-  CreditCard,
-  ChevronDown,
-  ChevronUp,
-  Wallet,
-  Banknote,
-  PlusCircle
+  PlusCircle,
+  Edit3,
+  Save
 } from 'lucide-react';
 import { IncomeModal } from '../Incomes/IncomeModal';
 
@@ -36,20 +33,19 @@ export const BankStatementsPage = () => {
     count: 0,
     totalDebit: 0,
     totalCredit: 0,
-    bankFeesTotal: 0,
-    loanPaymentsTotal: 0,
-    cashWithdrawalTotal: 0,
     netChange: 0,
+    aggregatedFeesTotal: 0,
+    aggregatedFeesCount: 0,
+    overdraftPairsRemoved: 0,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    cash_withdrawal: true,
-    bank_fees: false,
-    loan_payment: false,
-    transfer: true,
-    other: true,
-  });
+  const [editingTxId, setEditingTxId] = useState<number | null>(null);
+  const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Filters
+  const [filterType, setFilterType] = useState<'all' | 'debit' | 'credit'>('all');
+  const [filterUnassigned, setFilterUnassigned] = useState(false);
   
   // State for Income Modal from bank transaction
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
@@ -81,10 +77,10 @@ export const BankStatementsPage = () => {
           count: response.data.count || txData.length || 0,
           totalDebit: response.data.totalDebit || 0,
           totalCredit: response.data.totalCredit || 0,
-          bankFeesTotal: response.data.bankFeesTotal || 0,
-          loanPaymentsTotal: response.data.loanPaymentsTotal || 0,
-          cashWithdrawalTotal: response.data.cashWithdrawalTotal || 0,
           netChange: response.data.netChange || 0,
+          aggregatedFeesTotal: response.data.aggregatedFeesTotal || 0,
+          aggregatedFeesCount: response.data.aggregatedFeesCount || 0,
+          overdraftPairsRemoved: response.data.overdraftPairsRemoved || 0,
         });
       }
       setIsLoading(false);
@@ -135,17 +131,32 @@ export const BankStatementsPage = () => {
       if (response.success && response.data) {
         const txData = response.data.transactions || [];
         
+        // Show parsing info
+        const parseInfo: string[] = [];
+        if (response.data.overdraftPairsRemoved && response.data.overdraftPairsRemoved > 0) {
+          parseInfo.push(`${response.data.overdraftPairsRemoved} овърдрафт дублирания премахнати`);
+        }
+        if (response.data.aggregatedFeesCount && response.data.aggregatedFeesCount > 0) {
+          parseInfo.push(`${response.data.aggregatedFeesCount} такси обединени (${response.data.aggregatedFeesTotal}€)`);
+        }
+        
         // Save transactions to Google Sheets
         if (txData.length > 0) {
           const saveResponse = await apiService.saveBankTransactions(txData);
           
           if (saveResponse.success && saveResponse.data) {
             const { insertedCount, duplicateCount } = saveResponse.data;
+            let msg = '';
             if (insertedCount > 0) {
-              setSuccessMessage(`Записани ${insertedCount} нови транзакции. ${duplicateCount > 0 ? `${duplicateCount} дубликати пропуснати.` : ''}`);
-            } else if (duplicateCount > 0) {
-              setSuccessMessage(`Всички ${duplicateCount} транзакции вече съществуват в базата.`);
+              msg = `Записани ${insertedCount} нови транзакции.`;
             }
+            if (duplicateCount > 0) {
+              msg += ` ${duplicateCount} дубликати пропуснати.`;
+            }
+            if (parseInfo.length > 0) {
+              msg += ' ' + parseInfo.join('. ') + '.';
+            }
+            setSuccessMessage(msg || 'Обработката завърши.');
           }
         }
         
@@ -158,10 +169,10 @@ export const BankStatementsPage = () => {
             count: reloadResponse.data.count || reloadedData.length || 0,
             totalDebit: reloadResponse.data.totalDebit || 0,
             totalCredit: reloadResponse.data.totalCredit || 0,
-            bankFeesTotal: reloadResponse.data.bankFeesTotal || 0,
-            loanPaymentsTotal: reloadResponse.data.loanPaymentsTotal || 0,
-            cashWithdrawalTotal: reloadResponse.data.cashWithdrawalTotal || 0,
             netChange: reloadResponse.data.netChange || 0,
+            aggregatedFeesTotal: reloadResponse.data.aggregatedFeesTotal || 0,
+            aggregatedFeesCount: reloadResponse.data.aggregatedFeesCount || 0,
+            overdraftPairsRemoved: reloadResponse.data.overdraftPairsRemoved || 0,
           });
         }
       } else {
@@ -176,8 +187,12 @@ export const BankStatementsPage = () => {
   };
 
   const handleObjectAssign = async (txIndex: number, objectId: number | null) => {
-    const tx = transactions[txIndex];
+    const tx = filteredTransactions[txIndex];
     const obj = objects.find(o => o.id === objectId);
+    
+    // Find actual index in full transactions array
+    const actualIndex = transactions.findIndex(t => t.id === tx.id);
+    if (actualIndex === -1) return;
     
     // Save to database if transaction has ID
     if (tx.id) {
@@ -188,13 +203,11 @@ export const BankStatementsPage = () => {
           status: objectId ? 'matched' : 'unmatched',
         });
         
-        console.log('Update bank transaction response:', response);
-        
         if (response.success) {
           // Update locally only on success
           const updatedTransactions = [...transactions];
-          updatedTransactions[txIndex] = {
-            ...updatedTransactions[txIndex],
+          updatedTransactions[actualIndex] = {
+            ...updatedTransactions[actualIndex],
             objectId,
             objectName: obj?.name || null,
             status: objectId ? 'matched' : 'unmatched',
@@ -211,24 +224,44 @@ export const BankStatementsPage = () => {
         setError('Грешка при запазване на промените');
         setTimeout(() => setError(null), 5000);
       }
-    } else {
-      // No ID - just update locally (new transaction not saved yet)
-      const updatedTransactions = [...transactions];
-      updatedTransactions[txIndex] = {
-        ...updatedTransactions[txIndex],
-        objectId,
-        objectName: obj?.name || null,
-        status: objectId ? 'matched' : 'unmatched',
-      };
-      setTransactions(updatedTransactions);
     }
   };
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
+  const startEditDescription = (tx: BankTransaction) => {
+    setEditingTxId(tx.id || null);
+    setEditDescription(tx.displayName || tx.description || '');
+  };
+
+  const saveDescription = async (txIndex: number) => {
+    const tx = filteredTransactions[txIndex];
+    const actualIndex = transactions.findIndex(t => t.id === tx.id);
+    if (actualIndex === -1 || !tx.id) return;
+
+    try {
+      const response = await apiService.updateBankTransaction(tx.id, {
+        displayName: editDescription,
+      });
+      
+      if (response.success) {
+        const updatedTransactions = [...transactions];
+        updatedTransactions[actualIndex] = {
+          ...updatedTransactions[actualIndex],
+          displayName: editDescription,
+        };
+        setTransactions(updatedTransactions);
+        setEditingTxId(null);
+        setEditDescription('');
+        setSuccessMessage('Описанието е запазено');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.error || 'Грешка при запазване');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('Error updating description:', err);
+      setError('Грешка при запазване');
+      setTimeout(() => setError(null), 5000);
+    }
   };
 
   // Create income from bank transaction (credit)
@@ -255,59 +288,23 @@ export const BankStatementsPage = () => {
 
   const clearData = () => {
     setTransactions([]);
-    setStats({ count: 0, totalDebit: 0, totalCredit: 0, bankFeesTotal: 0, loanPaymentsTotal: 0, cashWithdrawalTotal: 0, netChange: 0 });
+    setStats({ count: 0, totalDebit: 0, totalCredit: 0, netChange: 0, aggregatedFeesTotal: 0, aggregatedFeesCount: 0, overdraftPairsRemoved: 0 });
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Group transactions by category
-  const groupedTransactions = {
-    cash_withdrawal: transactions.filter(tx => tx.category === 'cash_withdrawal'),
-    bank_fees: transactions.filter(tx => tx.category === 'bank_fees'),
-    loan_payment: transactions.filter(tx => tx.category === 'loan_payment'),
-    transfer: transactions.filter(tx => tx.category === 'transfer'),
-    other: transactions.filter(tx => !tx.category || tx.category === 'other'),
-  };
+  // Filter transactions
+  const filteredTransactions = transactions.filter(tx => {
+    if (filterType === 'debit' && tx.type !== 'debit') return false;
+    if (filterType === 'credit' && tx.type !== 'credit') return false;
+    if (filterUnassigned && tx.objectId) return false;
+    return true;
+  });
 
-  const categoryInfo: Record<string, { title: string; icon: React.ReactNode; bgColor: string; textColor: string; description: string }> = {
-    cash_withdrawal: {
-      title: 'Изтеглени пари в брой',
-      icon: <Banknote className="w-5 h-5" />,
-      bgColor: 'bg-green-100',
-      textColor: 'text-green-600',
-      description: 'Картови транзакции на каса',
-    },
-    bank_fees: {
-      title: 'Банкови услуги',
-      icon: <Landmark className="w-5 h-5" />,
-      bgColor: 'bg-purple-100',
-      textColor: 'text-purple-600',
-      description: 'Автоматични такси, усвояване на кредит',
-    },
-    loan_payment: {
-      title: 'Погасяване на кредит',
-      icon: <CreditCard className="w-5 h-5" />,
-      bgColor: 'bg-orange-100',
-      textColor: 'text-orange-600',
-      description: 'Общофирмени разходи',
-    },
-    transfer: {
-      title: 'Преводи по фактури',
-      icon: <FileText className="w-5 h-5" />,
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-600',
-      description: 'Плащания към доставчици',
-    },
-    other: {
-      title: 'Други операции',
-      icon: <Wallet className="w-5 h-5" />,
-      bgColor: 'bg-gray-100',
-      textColor: 'text-gray-600',
-      description: 'Некатегоризирани транзакции',
-    },
-  };
+  // Count unassigned
+  const unassignedCount = transactions.filter(tx => !tx.objectId).length;
 
   if (!isDirector) {
     return (
@@ -326,7 +323,7 @@ export const BankStatementsPage = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Банкови извлечения</h1>
-        <p className="text-gray-500">Качете CSV от Asset Bank за анализ и категоризация</p>
+        <p className="text-gray-500">Качете CSV от Asset Bank и разпределете транзакциите по обекти</p>
       </div>
 
       {/* Upload Section */}
@@ -457,168 +454,201 @@ export const BankStatementsPage = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className={`bg-white rounded-xl p-4 shadow-sm border ${
+              unassignedCount > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100'
+            }`}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  stats.netChange >= 0 ? 'bg-green-100' : 'bg-red-100'
+                  unassignedCount > 0 ? 'bg-red-100' : 'bg-gray-100'
                 }`}>
-                  <Wallet className={`w-5 h-5 ${stats.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                  <AlertTriangle className={`w-5 h-5 ${unassignedCount > 0 ? 'text-red-600' : 'text-gray-400'}`} />
                 </div>
                 <div>
-                  <p className={`text-lg font-bold ${stats.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {stats.netChange >= 0 ? '+' : ''}{stats.netChange.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                  <p className={`text-xl font-bold ${unassignedCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                    {unassignedCount}
                   </p>
-                  <p className="text-sm text-gray-500">Промяна</p>
+                  <p className="text-sm text-gray-500">Без обект</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Categorized Transactions */}
-          <div className="space-y-4">
-            {(Object.keys(groupedTransactions) as Array<keyof typeof groupedTransactions>).map(category => {
-              const txList = groupedTransactions[category];
-              if (txList.length === 0) return null;
+          {/* Filters */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="text-sm font-medium text-gray-700">Филтър:</span>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFilterType('all')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    filterType === 'all' 
+                      ? 'bg-primary-100 text-primary-700' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Всички
+                </button>
+                <button
+                  onClick={() => setFilterType('debit')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    filterType === 'debit' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Разходи
+                </button>
+                <button
+                  onClick={() => setFilterType('credit')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    filterType === 'credit' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Приходи
+                </button>
+              </div>
 
-              const info = categoryInfo[category];
-              const isExpanded = expandedCategories[category];
-              const categoryTotal = txList.reduce((sum, tx) => 
-                sum + (tx.type === 'debit' ? -tx.amount : tx.amount), 0
-              );
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterUnassigned}
+                  onChange={(e) => setFilterUnassigned(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-600">Само без обект</span>
+              </label>
 
-              return (
-                <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  {/* Category Header */}
-                  <button
-                    onClick={() => toggleCategory(category)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${info.bgColor}`}>
-                        <span className={info.textColor}>{info.icon}</span>
-                      </div>
-                      <div className="text-left">
-                        <h3 className="font-semibold text-gray-900">{info.title}</h3>
-                        <p className="text-sm text-gray-500">{txList.length} транзакции • {info.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`font-bold ${categoryTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {categoryTotal >= 0 ? '+' : ''}{categoryTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
-                      </span>
-                      {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-400 ml-auto">
+                Показани: {filteredTransactions.length} от {transactions.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Transaction List */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="divide-y divide-gray-100">
+              {filteredTransactions.map((tx, index) => (
+                <div key={tx.id || index} className={`p-4 ${!tx.objectId ? 'bg-red-50/30' : ''}`}>
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                      {tx.type === 'credit' ? (
+                        <TrendingUp className="w-5 h-5 text-green-600" />
                       ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                        <TrendingDown className="w-5 h-5 text-red-600" />
                       )}
                     </div>
-                  </button>
-
-                  {/* Transaction List */}
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 divide-y divide-gray-100">
-                      {txList.map((tx, index) => {
-                        const globalIndex = transactions.indexOf(tx);
-                        
-                        return (
-                          <div key={index} className="p-4">
-                            <div className="flex items-start gap-4">
-                              {/* Icon */}
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
-                              }`}>
-                                {tx.type === 'credit' ? (
-                                  <TrendingUp className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <TrendingDown className="w-4 h-4 text-red-600" />
-                                )}
-                              </div>
-                              
-                              {/* Details */}
-                              <div className="flex-grow min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-gray-900">
-                                    {tx.displayName || tx.counterpartyName || tx.description || 'Без описание'}
-                                  </span>
-                                  {tx.isCompanyExpense && (
-                                    <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
-                                      Общофирмен
-                                    </span>
-                                  )}
-                                </div>
-                                
-                                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {tx.date}
-                                  </span>
-                                  {tx.reference && <span>Реф: {tx.reference}</span>}
-                                  {tx.invoiceRef && (
-                                    <span className="text-blue-600 font-medium">
-                                      Фактура: {tx.invoiceRef}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {tx.purpose && tx.category === 'transfer' && (
-                                  <p className="text-sm text-gray-400 mt-1 truncate">
-                                    {tx.purpose}
-                                  </p>
-                                )}
-
-                                {/* Object Assignment - for all transfer transactions (debit AND credit) */}
-                                {category === 'transfer' && (
-                                  <div className="mt-2 flex items-center gap-2 flex-wrap">
-                                    <Building2 className="w-4 h-4 text-gray-400" />
-                                    <select
-                                      value={tx.objectId || 0}
-                                      onChange={(e) => handleObjectAssign(globalIndex, Number(e.target.value) || null)}
-                                      className="text-sm border border-gray-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    >
-                                      <option value={0}>-- Изберете обект --</option>
-                                      {objects.map(obj => (
-                                        <option key={obj.id} value={obj.id}>{obj.name}</option>
-                                      ))}
-                                    </select>
-                                    {tx.objectName && (
-                                      <span className="text-sm text-green-600 flex items-center gap-1">
-                                        <Check className="w-3 h-3" />
-                                        Зачислен
-                                      </span>
-                                    )}
-                                    
-                                    {/* Create Income button for credit transactions */}
-                                    {tx.type === 'credit' && (
-                                      <button
-                                        onClick={() => handleCreateIncomeFromTx(tx)}
-                                        className="ml-auto px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
-                                      >
-                                        <PlusCircle className="w-4 h-4" />
-                                        Създай приход
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Amount */}
-                              <div className="text-right flex-shrink-0">
-                                <p className={`text-lg font-bold ${
-                                  tx.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {tx.type === 'credit' ? '+' : '-'}
-                                  {tx.amount.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
-                                </p>
-                              </div>
-                            </div>
+                    
+                    {/* Details */}
+                    <div className="flex-grow min-w-0">
+                      {/* Description - editable */}
+                      <div className="flex items-center gap-2 mb-1">
+                        {editingTxId === tx.id ? (
+                          <div className="flex items-center gap-2 flex-grow">
+                            <input
+                              type="text"
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value)}
+                              className="flex-grow px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => saveDescription(index)}
+                              className="p-1 text-green-600 hover:bg-green-100 rounded"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => { setEditingTxId(null); setEditDescription(''); }}
+                              className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
-                        );
-                      })}
+                        ) : (
+                          <>
+                            <span className="font-medium text-gray-900">
+                              {tx.displayName || tx.counterpartyName || tx.description || 'Без описание'}
+                            </span>
+                            <button
+                              onClick={() => startEditDescription(tx)}
+                              className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                              title="Редактирай описание"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {tx.date}
+                        </span>
+                        {tx.reference && <span className="text-xs">Реф: {tx.reference.slice(0, 20)}...</span>}
+                      </div>
+
+                      {tx.purpose && (
+                        <p className="text-sm text-gray-400 mt-1 truncate">
+                          {tx.purpose}
+                        </p>
+                      )}
+
+                      {/* Object Assignment */}
+                      <div className="mt-3 flex items-center gap-3 flex-wrap">
+                        <Building2 className="w-4 h-4 text-gray-400" />
+                        <select
+                          value={tx.objectId || 0}
+                          onChange={(e) => handleObjectAssign(index, Number(e.target.value) || null)}
+                          className={`text-sm border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                            tx.objectId ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                          }`}
+                        >
+                          <option value={0}>-- Изберете обект --</option>
+                          {objects.map(obj => (
+                            <option key={obj.id} value={obj.id}>{obj.name}</option>
+                          ))}
+                        </select>
+                        
+                        {tx.objectName && (
+                          <span className="text-sm text-green-600 flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Зачислен
+                          </span>
+                        )}
+                        
+                        {/* Create Income button for credit transactions */}
+                        {tx.type === 'credit' && (
+                          <button
+                            onClick={() => handleCreateIncomeFromTx(tx)}
+                            className="ml-auto px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                          >
+                            <PlusCircle className="w-4 h-4" />
+                            Създай приход
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
+                    
+                    {/* Amount */}
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-lg font-bold ${
+                        tx.type === 'credit' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {tx.type === 'credit' ? '+' : '-'}
+                        {tx.amount.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
 
           {/* Summary */}
@@ -626,39 +656,30 @@ export const BankStatementsPage = () => {
             <div className="flex items-start gap-3">
               <Landmark className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-blue-800">Обобщение на разходите</h3>
+                <h3 className="font-semibold text-blue-800">Обобщение</h3>
                 <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-blue-700">Изтеглени в брой:</span>
-                    <span className="ml-2 font-medium text-green-700">
-                      {stats.cashWithdrawalTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                    <span className="text-blue-700">Общо разходи:</span>
+                    <span className="ml-2 font-medium text-red-600">
+                      -{stats.totalDebit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>
-                    <span className="text-blue-700">Банкови такси:</span>
-                    <span className="ml-2 font-medium text-blue-900">
-                      {stats.bankFeesTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700">Погасяване кредит:</span>
-                    <span className="ml-2 font-medium text-blue-900">
-                      {stats.loanPaymentsTotal.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700">Преводи по фактури:</span>
-                    <span className="ml-2 font-medium text-blue-900">
-                      {groupedTransactions.transfer
-                        .filter(tx => tx.type === 'debit')
-                        .reduce((sum, tx) => sum + tx.amount, 0)
-                        .toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                    <span className="text-blue-700">Общо приходи:</span>
+                    <span className="ml-2 font-medium text-green-600">
+                      +{stats.totalCredit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>
                     <span className="text-blue-700">Зачислени към обекти:</span>
                     <span className="ml-2 font-medium text-blue-900">
                       {transactions.filter(tx => tx.objectId).length} транзакции
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">Нетна промяна:</span>
+                    <span className={`ml-2 font-medium ${stats.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {stats.netChange >= 0 ? '+' : ''}{stats.netChange.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                 </div>
@@ -676,8 +697,7 @@ export const BankStatementsPage = () => {
             Няма качени извлечения
           </h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            Качете CSV файл от Asset Bank, за да анализирате банковите транзакции 
-            и да ги категоризирате по обекти.
+            Качете CSV файл от Asset Bank, за да разпределите банковите транзакции по обекти.
           </p>
         </div>
       )}

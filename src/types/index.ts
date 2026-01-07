@@ -175,4 +175,8 @@ export interface BankStatementParseResult {
   loanPaymentsTotal?: number;
   cashWithdrawalTotal?: number;
   netChange?: number;
+  // New fields for aggregation info
+  aggregatedFeesTotal?: number;
+  aggregatedFeesCount?: number;
+  overdraftPairsRemoved?: number;
 }
