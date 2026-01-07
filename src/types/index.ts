@@ -150,6 +150,7 @@ export interface BankTransaction {
   reference: string;
   description: string;
   displayName?: string;
+  operationType?: string;
   type: 'debit' | 'credit';
   amount: number;
   balance?: number;
@@ -162,6 +163,8 @@ export interface BankTransaction {
   isCompanyExpense?: boolean;
   objectId?: number | null;
   objectName?: string | null;
+  technicianId?: number | null;
+  technicianName?: string | null;
   status: 'matched' | 'unmatched';
   matchedInvoiceId?: number;
 }
@@ -175,8 +178,12 @@ export interface BankStatementParseResult {
   loanPaymentsTotal?: number;
   cashWithdrawalTotal?: number;
   netChange?: number;
-  // New fields for aggregation info
-  aggregatedFeesTotal?: number;
-  aggregatedFeesCount?: number;
-  overdraftPairsRemoved?: number;
+  // Grouping info
+  groupedInterest?: number;
+  groupedInterestCount?: number;
+  groupedPrincipal?: number;
+  groupedPrincipalCount?: number;
+  groupedFees?: number;
+  groupedFeesCount?: number;
+  skippedTransactions?: number;
 }

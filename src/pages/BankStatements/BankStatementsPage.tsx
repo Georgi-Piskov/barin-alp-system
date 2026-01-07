@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { BankTransaction, Invoice, ConstructionObject, Income } from '../../types';
+import { BankTransaction, Invoice, ConstructionObject, Income, User } from '../../types';
 import { 
   FileUp,
   FileText,
@@ -30,14 +30,19 @@ export const BankStatementsPage = () => {
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
   const [_invoices, setInvoices] = useState<Invoice[]>([]);
   const [objects, setObjects] = useState<ConstructionObject[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState({
     count: 0,
     totalDebit: 0,
     totalCredit: 0,
     netChange: 0,
-    aggregatedFeesTotal: 0,
-    aggregatedFeesCount: 0,
-    overdraftPairsRemoved: 0,
+    groupedInterest: 0,
+    groupedInterestCount: 0,
+    groupedPrincipal: 0,
+    groupedPrincipalCount: 0,
+    groupedFees: 0,
+    groupedFeesCount: 0,
+    skippedTransactions: 0,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editingTxId, setEditingTxId] = useState<number | null>(null);
@@ -55,19 +60,25 @@ export const BankStatementsPage = () => {
 
   const isDirector = user?.role === 'director';
 
-  // Load objects for assignment
+  // Load objects and users for assignment
   useEffect(() => {
-    const loadObjects = async () => {
+    const loadData = async () => {
       try {
-        const response = await apiService.getObjects();
-        if (response.success && response.data) {
-          setObjects(response.data);
+        const [objectsRes, usersRes] = await Promise.all([
+          apiService.getObjects(),
+          apiService.getUsers()
+        ]);
+        if (objectsRes.success && objectsRes.data) {
+          setObjects(objectsRes.data);
+        }
+        if (usersRes.success && usersRes.data) {
+          setUsers(usersRes.data);
         }
       } catch (err) {
-        console.error('Error loading objects:', err);
+        console.error('Error loading data:', err);
       }
     };
-    loadObjects();
+    loadData();
   }, []);
 
   // Load saved bank transactions on mount
@@ -85,9 +96,13 @@ export const BankStatementsPage = () => {
             totalDebit: 0,
             totalCredit: 0,
             netChange: 0,
-            aggregatedFeesTotal: 0,
-            aggregatedFeesCount: 0,
-            overdraftPairsRemoved: 0,
+            groupedInterest: 0,
+            groupedInterestCount: 0,
+            groupedPrincipal: 0,
+            groupedPrincipalCount: 0,
+            groupedFees: 0,
+            groupedFeesCount: 0,
+            skippedTransactions: 0,
           };
           
           if (Array.isArray(response.data)) {
@@ -102,9 +117,13 @@ export const BankStatementsPage = () => {
               totalDebit: response.data.totalDebit || 0,
               totalCredit: response.data.totalCredit || 0,
               netChange: response.data.netChange || 0,
-              aggregatedFeesTotal: response.data.aggregatedFeesTotal || 0,
-              aggregatedFeesCount: response.data.aggregatedFeesCount || 0,
-              overdraftPairsRemoved: response.data.overdraftPairsRemoved || 0,
+              groupedInterest: response.data.groupedInterest || 0,
+              groupedInterestCount: response.data.groupedInterestCount || 0,
+              groupedPrincipal: response.data.groupedPrincipal || 0,
+              groupedPrincipalCount: response.data.groupedPrincipalCount || 0,
+              groupedFees: response.data.groupedFees || 0,
+              groupedFeesCount: response.data.groupedFeesCount || 0,
+              skippedTransactions: response.data.skippedTransactions || 0,
             };
           }
           
@@ -166,11 +185,17 @@ export const BankStatementsPage = () => {
         
         // Show parsing info
         const parseInfo: string[] = [];
-        if (response.data.overdraftPairsRemoved && response.data.overdraftPairsRemoved > 0) {
-          parseInfo.push(`${response.data.overdraftPairsRemoved} овърдрафт дублирания премахнати`);
+        if (response.data.skippedTransactions && response.data.skippedTransactions > 0) {
+          parseInfo.push(`${response.data.skippedTransactions} вътрешнобанкови операции пропуснати`);
         }
-        if (response.data.aggregatedFeesCount && response.data.aggregatedFeesCount > 0) {
-          parseInfo.push(`${response.data.aggregatedFeesCount} такси обединени (${response.data.aggregatedFeesTotal}€)`);
+        if (response.data.groupedInterestCount && response.data.groupedInterestCount > 0) {
+          parseInfo.push(`${response.data.groupedInterestCount} лихви обединени (${response.data.groupedInterest}€)`);
+        }
+        if (response.data.groupedPrincipalCount && response.data.groupedPrincipalCount > 0) {
+          parseInfo.push(`${response.data.groupedPrincipalCount} главници обединени (${response.data.groupedPrincipal}€)`);
+        }
+        if (response.data.groupedFeesCount && response.data.groupedFeesCount > 0) {
+          parseInfo.push(`${response.data.groupedFeesCount} такси обединени (${response.data.groupedFees}€)`);
         }
         
         // Save transactions to Google Sheets
@@ -203,9 +228,13 @@ export const BankStatementsPage = () => {
             totalDebit: reloadResponse.data.totalDebit || 0,
             totalCredit: reloadResponse.data.totalCredit || 0,
             netChange: reloadResponse.data.netChange || 0,
-            aggregatedFeesTotal: reloadResponse.data.aggregatedFeesTotal || 0,
-            aggregatedFeesCount: reloadResponse.data.aggregatedFeesCount || 0,
-            overdraftPairsRemoved: reloadResponse.data.overdraftPairsRemoved || 0,
+            groupedInterest: reloadResponse.data.groupedInterest || 0,
+            groupedInterestCount: reloadResponse.data.groupedInterestCount || 0,
+            groupedPrincipal: reloadResponse.data.groupedPrincipal || 0,
+            groupedPrincipalCount: reloadResponse.data.groupedPrincipalCount || 0,
+            groupedFees: reloadResponse.data.groupedFees || 0,
+            groupedFeesCount: reloadResponse.data.groupedFeesCount || 0,
+            skippedTransactions: reloadResponse.data.skippedTransactions || 0,
           });
         }
       } else {
@@ -311,6 +340,41 @@ export const BankStatementsPage = () => {
     setIsIncomeModalOpen(true);
   };
 
+  // Assign credit transaction to technician as income
+  const handleAssignToTechnician = async (txIndex: number, technicianId: number | null) => {
+    const tx = filteredTransactions[txIndex];
+    const actualIndex = transactions.findIndex(t => t.id === tx.id);
+    if (actualIndex === -1 || !tx.id) return;
+
+    try {
+      const technician = technicianId ? users.find(u => u.id === technicianId) : null;
+      
+      const response = await apiService.updateBankTransaction(tx.id, {
+        technicianId: technicianId,
+        technicianName: technician?.name || null,
+      });
+      
+      if (response.success) {
+        const updatedTransactions = [...transactions];
+        updatedTransactions[actualIndex] = {
+          ...updatedTransactions[actualIndex],
+          technicianId: technicianId,
+          technicianName: technician?.name || null,
+        };
+        setTransactions(updatedTransactions);
+        setSuccessMessage(`Преводът е ${technicianId ? 'заприходен на ' + technician?.name : 'премахнат от техник'}`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.error || 'Грешка при присвояване');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('Error assigning to technician:', err);
+      setError('Грешка при присвояване на техник');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
   const handleIncomeSaved = () => {
     setIsIncomeModalOpen(false);
     setIncomeFromBankTx(null);
@@ -321,7 +385,7 @@ export const BankStatementsPage = () => {
 
   const clearData = () => {
     setTransactions([]);
-    setStats({ count: 0, totalDebit: 0, totalCredit: 0, netChange: 0, aggregatedFeesTotal: 0, aggregatedFeesCount: 0, overdraftPairsRemoved: 0 });
+    setStats({ count: 0, totalDebit: 0, totalCredit: 0, netChange: 0, groupedInterest: 0, groupedInterestCount: 0, groupedPrincipal: 0, groupedPrincipalCount: 0, groupedFees: 0, groupedFeesCount: 0, skippedTransactions: 0 });
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -667,15 +731,37 @@ export const BankStatementsPage = () => {
                           </span>
                         )}
                         
-                        {/* Create Income button for credit transactions */}
+                        {/* Technician Assignment for credit transactions */}
                         {tx.type === 'credit' && (
-                          <button
-                            onClick={() => handleCreateIncomeFromTx(tx)}
-                            className="ml-auto px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
-                          >
-                            <PlusCircle className="w-4 h-4" />
-                            Създай приход
-                          </button>
+                          <>
+                            <select
+                              value={tx.technicianId || 0}
+                              onChange={(e) => handleAssignToTechnician(index, Number(e.target.value) || null)}
+                              className={`text-sm border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                tx.technicianId ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+                              }`}
+                            >
+                              <option value={0}>-- Заприходи на техник --</option>
+                              {users.filter(u => u.role === 'technician').map(tech => (
+                                <option key={tech.id} value={tech.id}>{tech.name}</option>
+                              ))}
+                            </select>
+                            
+                            {tx.technicianName && (
+                              <span className="text-sm text-blue-600 flex items-center gap-1">
+                                <Check className="w-3 h-3" />
+                                {tx.technicianName}
+                              </span>
+                            )}
+                            
+                            <button
+                              onClick={() => handleCreateIncomeFromTx(tx)}
+                              className="ml-auto px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                            >
+                              <PlusCircle className="w-4 h-4" />
+                              Създай приход
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>

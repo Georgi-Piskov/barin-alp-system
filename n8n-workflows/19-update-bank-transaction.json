@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.item.json.body;\n\nconst transactionId = body.id;\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\nconst displayName = body.displayName;\n\nconsole.log('Update Bank Transaction - Input:', body);\n\nif (!transactionId) {\n  throw new Error('Transaction ID is required');\n}\n\nconst result = { \n  id: parseInt(transactionId),\n  objectId: objectId !== null && objectId !== undefined ? String(objectId) : '',\n  objectName: objectName,\n  status: status\n};\n\n// Only include displayName if it was provided\nif (displayName !== undefined) {\n  result.displayName = displayName;\n}\n\nreturn [{ json: result }];"
+        "jsCode": "const body = $input.item.json.body;\n\nconst transactionId = body.id;\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\nconst displayName = body.displayName;\nconst technicianId = body.technicianId;\nconst technicianName = body.technicianName;\n\nconsole.log('Update Bank Transaction - Input:', body);\n\nif (!transactionId) {\n  throw new Error('Transaction ID is required');\n}\n\nconst result = { \n  id: parseInt(transactionId),\n  objectId: objectId !== null && objectId !== undefined ? String(objectId) : '',\n  objectName: objectName,\n  status: status\n};\n\n// Only include optional fields if provided\nif (displayName !== undefined) {\n  result.displayName = displayName;\n}\nif (technicianId !== undefined) {\n  result.technicianId = technicianId !== null ? String(technicianId) : '';\n}\nif (technicianName !== undefined) {\n  result.technicianName = technicianName || '';\n}\n\nreturn [{ json: result }];"
       },
       "id": "prepare",
       "name": "Prepare Data",
@@ -48,7 +48,9 @@
             "objectId": "={{ $json.objectId }}",
             "objectName": "={{ $json.objectName }}",
             "status": "={{ $json.status }}",
-            "displayName": "={{ $json.displayName }}"
+            "displayName": "={{ $json.displayName }}",
+            "technicianId": "={{ $json.technicianId }}",
+            "technicianName": "={{ $json.technicianName }}"
           },
           "matchingColumns": ["id"],
           "schema": [
@@ -56,7 +58,9 @@
             {"id": "objectId", "displayName": "objectId", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
             {"id": "objectName", "displayName": "objectName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
             {"id": "status", "displayName": "status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
-            {"id": "displayName", "displayName": "displayName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
+            {"id": "displayName", "displayName": "displayName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "technicianId", "displayName": "technicianId", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "technicianName", "displayName": "technicianName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": false}
           ]
         },
         "options": {
