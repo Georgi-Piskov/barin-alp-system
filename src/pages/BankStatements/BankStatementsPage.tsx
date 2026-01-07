@@ -57,9 +57,13 @@ export const BankStatementsPage = () => {
   // Load objects for assignment
   useEffect(() => {
     const loadObjects = async () => {
-      const response = await apiService.getObjects();
-      if (response.success && response.data) {
-        setObjects(response.data);
+      try {
+        const response = await apiService.getObjects();
+        if (response.success && response.data) {
+          setObjects(response.data);
+        }
+      } catch (err) {
+        console.error('Error loading objects:', err);
       }
     };
     loadObjects();
@@ -69,19 +73,24 @@ export const BankStatementsPage = () => {
   useEffect(() => {
     const loadSavedTransactions = async () => {
       setIsLoading(true);
-      const response = await apiService.getBankTransactions();
-      if (response.success && response.data) {
-        const txData = response.data.transactions || [];
-        setTransactions(txData);
-        setStats({
-          count: response.data.count || txData.length || 0,
-          totalDebit: response.data.totalDebit || 0,
-          totalCredit: response.data.totalCredit || 0,
-          netChange: response.data.netChange || 0,
-          aggregatedFeesTotal: response.data.aggregatedFeesTotal || 0,
-          aggregatedFeesCount: response.data.aggregatedFeesCount || 0,
-          overdraftPairsRemoved: response.data.overdraftPairsRemoved || 0,
-        });
+      try {
+        const response = await apiService.getBankTransactions();
+        if (response.success && response.data) {
+          const txData = response.data.transactions || [];
+          setTransactions(txData);
+          setStats({
+            count: response.data.count || txData.length || 0,
+            totalDebit: response.data.totalDebit || 0,
+            totalCredit: response.data.totalCredit || 0,
+            netChange: response.data.netChange || 0,
+            aggregatedFeesTotal: response.data.aggregatedFeesTotal || 0,
+            aggregatedFeesCount: response.data.aggregatedFeesCount || 0,
+            overdraftPairsRemoved: response.data.overdraftPairsRemoved || 0,
+          });
+        }
+      } catch (err) {
+        console.error('Error loading bank transactions:', err);
+        setError('Грешка при зареждане на банкови транзакции');
       }
       setIsLoading(false);
     };
