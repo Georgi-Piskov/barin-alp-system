@@ -75,18 +75,41 @@ export const BankStatementsPage = () => {
       setIsLoading(true);
       try {
         const response = await apiService.getBankTransactions();
+        console.log('Bank transactions response:', response);
+        
         if (response.success && response.data) {
-          const txData = response.data.transactions || [];
+          // Handle both array and object response formats
+          let txData: BankTransaction[] = [];
+          let statsData = {
+            count: 0,
+            totalDebit: 0,
+            totalCredit: 0,
+            netChange: 0,
+            aggregatedFeesTotal: 0,
+            aggregatedFeesCount: 0,
+            overdraftPairsRemoved: 0,
+          };
+          
+          if (Array.isArray(response.data)) {
+            // If response.data is an array directly
+            txData = response.data;
+            statsData.count = txData.length;
+          } else if (response.data.transactions) {
+            // If response.data has transactions property
+            txData = Array.isArray(response.data.transactions) ? response.data.transactions : [];
+            statsData = {
+              count: response.data.count || txData.length || 0,
+              totalDebit: response.data.totalDebit || 0,
+              totalCredit: response.data.totalCredit || 0,
+              netChange: response.data.netChange || 0,
+              aggregatedFeesTotal: response.data.aggregatedFeesTotal || 0,
+              aggregatedFeesCount: response.data.aggregatedFeesCount || 0,
+              overdraftPairsRemoved: response.data.overdraftPairsRemoved || 0,
+            };
+          }
+          
           setTransactions(txData);
-          setStats({
-            count: response.data.count || txData.length || 0,
-            totalDebit: response.data.totalDebit || 0,
-            totalCredit: response.data.totalCredit || 0,
-            netChange: response.data.netChange || 0,
-            aggregatedFeesTotal: response.data.aggregatedFeesTotal || 0,
-            aggregatedFeesCount: response.data.aggregatedFeesCount || 0,
-            overdraftPairsRemoved: response.data.overdraftPairsRemoved || 0,
-          });
+          setStats(statsData);
         }
       } catch (err) {
         console.error('Error loading bank transactions:', err);
