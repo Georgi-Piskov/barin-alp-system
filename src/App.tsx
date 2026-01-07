@@ -3,6 +3,7 @@ import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { ObjectsPage, ObjectDetailPage } from './pages/Objects';
 import { InvoicesPage } from './pages/Invoices';
+import { IncomesPage } from './pages/Incomes';
 import { InventoryPage } from './pages/Inventory';
 import { TransactionsPage } from './pages/Transactions';
 import { BankStatementsPage } from './pages/BankStatements';
@@ -28,6 +29,7 @@ function App() {
           <Route path="/objects" element={<ObjectsPage />} />
           <Route path="/objects/:id" element={<ObjectDetailPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
+          <Route path="/incomes" element={<IncomesPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/bank-statements" element={<BankStatementsPage />} />

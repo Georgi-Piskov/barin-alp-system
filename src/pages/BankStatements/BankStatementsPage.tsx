@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { BankTransaction, Invoice, ConstructionObject } from '../../types';
+import { BankTransaction, Invoice, ConstructionObject, Income } from '../../types';
 import { 
   FileUp,
   FileText,
@@ -19,8 +19,10 @@ import {
   ChevronDown,
   ChevronUp,
   Wallet,
-  Banknote
+  Banknote,
+  PlusCircle
 } from 'lucide-react';
+import { IncomeModal } from '../Incomes/IncomeModal';
 
 export const BankStatementsPage = () => {
   const { user } = useAuthStore();
@@ -48,6 +50,11 @@ export const BankStatementsPage = () => {
     other: true,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // State for Income Modal from bank transaction
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const [incomeFromBankTx, setIncomeFromBankTx] = useState<Partial<Income> | null>(null);
+  const [selectedBankTxId, setSelectedBankTxId] = useState<number | null>(null);
 
   const isDirector = user?.role === 'director';
 
@@ -222,6 +229,28 @@ export const BankStatementsPage = () => {
       ...prev,
       [category]: !prev[category],
     }));
+  };
+
+  // Create income from bank transaction (credit)
+  const handleCreateIncomeFromTx = (tx: BankTransaction) => {
+    setIncomeFromBankTx({
+      date: tx.date,
+      amount: tx.amount,
+      description: tx.displayName || tx.counterpartyName || tx.description || 'Банков приход',
+      objectId: tx.objectId || null,
+      objectName: tx.objectName || null,
+      bankTransactionId: tx.id || null,
+    });
+    setSelectedBankTxId(tx.id || null);
+    setIsIncomeModalOpen(true);
+  };
+
+  const handleIncomeSaved = () => {
+    setIsIncomeModalOpen(false);
+    setIncomeFromBankTx(null);
+    setSelectedBankTxId(null);
+    setSuccessMessage('Приходът е записан успешно!');
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   const clearData = () => {
@@ -539,7 +568,7 @@ export const BankStatementsPage = () => {
 
                                 {/* Object Assignment - for all transfer transactions (debit AND credit) */}
                                 {category === 'transfer' && (
-                                  <div className="mt-2 flex items-center gap-2">
+                                  <div className="mt-2 flex items-center gap-2 flex-wrap">
                                     <Building2 className="w-4 h-4 text-gray-400" />
                                     <select
                                       value={tx.objectId || 0}
@@ -556,6 +585,17 @@ export const BankStatementsPage = () => {
                                         <Check className="w-3 h-3" />
                                         Зачислен
                                       </span>
+                                    )}
+                                    
+                                    {/* Create Income button for credit transactions */}
+                                    {tx.type === 'credit' && (
+                                      <button
+                                        onClick={() => handleCreateIncomeFromTx(tx)}
+                                        className="ml-auto px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                                      >
+                                        <PlusCircle className="w-4 h-4" />
+                                        Създай приход
+                                      </button>
                                     )}
                                   </div>
                                 )}
@@ -641,6 +681,21 @@ export const BankStatementsPage = () => {
           </p>
         </div>
       )}
+
+      {/* Income Modal for creating income from bank transaction */}
+      <IncomeModal
+        isOpen={isIncomeModalOpen}
+        onClose={() => {
+          setIsIncomeModalOpen(false);
+          setIncomeFromBankTx(null);
+          setSelectedBankTxId(null);
+        }}
+        onSave={handleIncomeSaved}
+        income={null}
+        objects={objects}
+        prefillData={incomeFromBankTx}
+        bankTransactionId={selectedBankTxId}
+      />
     </div>
   );
 };

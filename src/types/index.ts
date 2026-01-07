@@ -99,6 +99,19 @@ export interface ObjectExpenses {
   invoiceCount: number;
 }
 
+// Income types - Приходи по обекти
+export interface Income {
+  id: number;
+  date: string;
+  amount: number;
+  description: string;
+  objectId: number | null;
+  objectName: string | null;
+  createdBy: number;
+  createdByName: string;
+  bankTransactionId?: number | null; // ако е от банково извлечение
+}
+
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

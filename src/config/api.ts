@@ -52,6 +52,12 @@ export const API_CONFIG = {
     SAVE_BANK_TRANSACTIONS: '/barin-alp/bank-transactions/save',
     UPDATE_BANK_TRANSACTION: '/barin-alp/bank-transactions/update', // POST with id in body
     
+    // Incomes - Приходи
+    GET_INCOMES: '/barin-alp/incomes',
+    CREATE_INCOME: '/barin-alp/incomes/create',
+    UPDATE_INCOME: '/barin-alp/incomes/update',
+    DELETE_INCOME: '/barin-alp/incomes/delete',
+    
     // Object Details (combined endpoint to reduce API calls)
     GET_OBJECT_DETAILS: '/barin-alp/objects/:id/details',
   }

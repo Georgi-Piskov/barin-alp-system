@@ -80,6 +80,11 @@
 | Update Inventory | PUT | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/inventory/update` |
 | Delete Inventory | DELETE | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/inventory/delete` |
 | Upload Photo | POST | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/upload-photo` |
+| **Incomes** | | |
+| Get Incomes | GET | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/incomes` |
+| Create Income | POST | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/incomes/create` |
+| Update Income | PUT | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/incomes/update` |
+| Delete Income | DELETE | `https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/incomes/delete` |
 
 ---
 

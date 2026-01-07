@@ -6,6 +6,7 @@ import {
   Invoice,
   InventoryItem,
   Transaction,
+  Income,
   ApiResponse,
   DashboardStats,
   BankStatementParseResult,
@@ -956,6 +957,122 @@ export const apiService = {
     } catch (error) {
       console.error('Get Object Details Fallback error:', error);
       return { success: false, error: 'Грешка при зареждане на данни за обекта' };
+    }
+  },
+
+  // ==================== INCOMES ====================
+  async getIncomes(): Promise<ApiResponse<Income[]>> {
+    if (DEMO_MODE) {
+      return { success: true, data: [] };
+    }
+
+    const cacheKey = 'incomes-list';
+    const cached = getCached<Income[]>(cacheKey);
+    if (cached) {
+      return { success: true, data: cached };
+    }
+
+    try {
+      const response = await api.get(buildApiUrl(API_CONFIG.ENDPOINTS.GET_INCOMES));
+      
+      console.log('Get Incomes response from n8n:', response.data);
+      
+      // n8n returns { data: [...] } format
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        setCache(cacheKey, response.data.data);
+        return { success: true, data: response.data.data };
+      }
+      
+      // Handle array response
+      if (Array.isArray(response.data)) {
+        setCache(cacheKey, response.data);
+        return { success: true, data: response.data };
+      }
+      
+      return { success: true, data: [] };
+    } catch (error) {
+      console.error('Get Incomes error:', error);
+      return { success: false, error: 'Грешка при зареждане на приходите' };
+    }
+  },
+
+  async createIncome(income: Omit<Income, 'id'>): Promise<ApiResponse<Income>> {
+    if (DEMO_MODE) {
+      const newIncome = { ...income, id: Date.now() };
+      return { success: true, data: newIncome };
+    }
+
+    try {
+      const response = await api.post(
+        buildApiUrl(API_CONFIG.ENDPOINTS.CREATE_INCOME),
+        income
+      );
+      
+      console.log('Create Income response from n8n:', response.data);
+      
+      // Clear cache after creating
+      clearCache('incomes');
+      clearCache('object-details');
+      
+      // n8n returns { success: true, data: {...} }
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Create Income error:', error);
+      return { success: false, error: 'Грешка при създаване на приход' };
+    }
+  },
+
+  async updateIncome(id: number, updates: Partial<Income>): Promise<ApiResponse<Income>> {
+    if (DEMO_MODE) {
+      return { success: false, error: 'Demo mode' };
+    }
+
+    try {
+      const response = await api.put(
+        buildApiUrl(API_CONFIG.ENDPOINTS.UPDATE_INCOME),
+        { id, ...updates }
+      );
+      
+      console.log('Update Income response from n8n:', response.data);
+      
+      // Clear cache after updating
+      clearCache('incomes');
+      clearCache('object-details');
+      
+      // n8n returns { success: true, data: {...} }
+      if (response.data?.success && response.data?.data) {
+        return { success: true, data: response.data.data };
+      }
+      
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Update Income error:', error);
+      return { success: false, error: 'Грешка при обновяване на приход' };
+    }
+  },
+
+  async deleteIncome(id: number): Promise<ApiResponse<void>> {
+    if (DEMO_MODE) {
+      return { success: false, error: 'Demo mode' };
+    }
+
+    try {
+      await api.delete(buildApiUrl(API_CONFIG.ENDPOINTS.DELETE_INCOME), {
+        data: { id },
+      });
+      
+      // Clear cache after deleting
+      clearCache('incomes');
+      clearCache('object-details');
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Delete Income error:', error);
+      return { success: false, error: 'Грешка при изтриване на приход' };
     }
   },
 

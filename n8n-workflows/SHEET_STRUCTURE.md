@@ -48,6 +48,19 @@
 | B | name | Text | Бормашина Bosch |
 | C | category | Text | Инструменти / Машини / Скелета / Защитни средства / Електроматериали / ВиК материали / Други |
 | D | status | Text | available / in-use / maintenance / lost |
+
+### 5. INCOMES Sheet (Колони A-H) - ПРИХОДИ
+| Колона | Header | Type | Example |
+|--------|--------|------|---------|
+| A | id | Number | 1 |
+| B | date | Date | 2026-01-07 |
+| C | amount | Number | 5000 |
+| D | description | Text | Плащане по договор |
+| E | objectId | Number | 1 (ID на обект) |
+| F | objectName | Text | ВАРНИЦИ - СГРАДА |
+| G | createdBy | Number | 1 (user ID) |
+| H | createdByName | Text | Георги Писков |
+| I | bankTransactionId | Number | (optional) ID от банкова транзакция |
 | E | assignedTo | Number | 3 (user ID) |
 | F | assignedToName | Text | Петър Техник |
 | G | objectId | Number | 1 (object ID) |

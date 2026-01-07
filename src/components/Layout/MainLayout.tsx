@@ -11,6 +11,7 @@ import {
   X,
   User,
   Landmark,
+  TrendingUp,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -25,6 +26,7 @@ const navItems: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Табло' },
   { to: '/objects', icon: Building2, label: 'Обекти' },
   { to: '/invoices', icon: FileText, label: 'Фактури' },
+  { to: '/incomes', icon: TrendingUp, label: 'Приходи' },
   { to: '/inventory', icon: Package, label: 'Инвентар' },
   { to: '/transactions', icon: Receipt, label: 'Транзакции' },
   { to: '/bank-statements', icon: Landmark, label: 'Банка', directorOnly: true },
