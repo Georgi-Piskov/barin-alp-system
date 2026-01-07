@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { ConstructionObject, Invoice, BankTransaction, Transaction } from '../../types';
+import { ConstructionObject, Invoice, BankTransaction, Transaction, Income } from '../../types';
 import { 
   Building2, 
   Plus, 
@@ -13,7 +13,9 @@ import {
   Edit,
   Trash2,
   Eye,
-  Users
+  Users,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { ObjectModal } from './ObjectModal';
 
@@ -23,9 +25,11 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   paused: { label: 'На изчакване', color: 'bg-yellow-100 text-yellow-700' },
 };
 
-// Interface for object with calculated expenses
+// Interface for object with calculated expenses and incomes
 interface ObjectWithExpenses extends ConstructionObject {
   calculatedExpenses: number;
+  calculatedIncomes: number;
+  balance: number;
 }
 
 export const ObjectsPage = () => {
@@ -68,12 +72,17 @@ export const ObjectsPage = () => {
         await new Promise(resolve => setTimeout(resolve, 200));
         
         const transactionsRes = await apiService.getTransactions();
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Load incomes
+        const incomesRes = await apiService.getIncomes();
         
         const invoices: Invoice[] = invoicesRes.success && invoicesRes.data ? invoicesRes.data : [];
         const bankTransactions: BankTransaction[] = bankTxRes.success && bankTxRes.data?.transactions ? bankTxRes.data.transactions : [];
         const cashTransactions: Transaction[] = transactionsRes.success && transactionsRes.data ? transactionsRes.data : [];
+        const incomes: Income[] = incomesRes.success && incomesRes.data ? incomesRes.data : [];
         
-        // Calculate real expenses for each object
+        // Calculate real expenses and incomes for each object
         const objectsWithExpenses: ObjectWithExpenses[] = objectsRes.data.map(obj => {
           // Sum invoices for this object
           const invoiceTotal = invoices
@@ -90,9 +99,18 @@ export const ObjectsPage = () => {
             .filter(tx => tx.objectId === obj.id && tx.type === 'expense')
             .reduce((sum, tx) => sum + (tx.amount || 0), 0);
           
+          // Sum incomes for this object
+          const incomeTotal = incomes
+            .filter(inc => inc.objectId === obj.id)
+            .reduce((sum, inc) => sum + (inc.amount || 0), 0);
+          
+          const calculatedExpenses = invoiceTotal + bankTotal + cashTotal;
+          
           return {
             ...obj,
-            calculatedExpenses: invoiceTotal + bankTotal + cashTotal
+            calculatedExpenses,
+            calculatedIncomes: incomeTotal,
+            balance: incomeTotal - calculatedExpenses
           };
         });
         
@@ -105,7 +123,9 @@ export const ObjectsPage = () => {
       if (objectsRes.success && objectsRes.data) {
         setObjects(objectsRes.data.map(obj => ({
           ...obj,
-          calculatedExpenses: obj.totalExpenses || 0
+          calculatedExpenses: obj.totalExpenses || 0,
+          calculatedIncomes: 0,
+          balance: -(obj.totalExpenses || 0)
         })));
       }
     }
@@ -365,11 +385,34 @@ export const ObjectsPage = () => {
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-gray-100">
+                <div className="pt-3 border-t border-gray-100 space-y-2">
+                  {/* Incomes */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Разходи</span>
-                    <span className="text-lg font-bold text-gray-900">
+                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <TrendingUp className="w-3.5 h-3.5 text-green-500" />
+                      Приходи
+                    </span>
+                    <span className="font-semibold text-green-600">
+                      {object.calculatedIncomes.toLocaleString('bg-BG')} €
+                    </span>
+                  </div>
+                  
+                  {/* Expenses */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <TrendingDown className="w-3.5 h-3.5 text-red-500" />
+                      Разходи
+                    </span>
+                    <span className="font-semibold text-red-600">
                       {object.calculatedExpenses.toLocaleString('bg-BG')} €
+                    </span>
+                  </div>
+                  
+                  {/* Balance */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <span className="text-sm font-medium text-gray-700">Баланс</span>
+                    <span className={`text-lg font-bold ${object.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {object.balance >= 0 ? '+' : ''}{object.balance.toLocaleString('bg-BG')} €
                     </span>
                   </div>
                 </div>

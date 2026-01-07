@@ -20,7 +20,8 @@ import {
   Clock,
   AlertTriangle,
   Landmark,
-  Banknote
+  Banknote,
+  Calculator
 } from 'lucide-react';
 import { ObjectModal } from './ObjectModal';
 
@@ -217,7 +218,7 @@ export const ObjectDetailPage = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className={`grid grid-cols-2 ${isDirector ? 'lg:grid-cols-6' : 'lg:grid-cols-3'} gap-4`}>
+      <div className={`grid grid-cols-2 ${isDirector ? 'lg:grid-cols-7' : 'lg:grid-cols-3'} gap-4`}>
         {/* Total Incomes - Only for Directors */}
         {isDirector && (
           <div className="bg-white rounded-xl p-4 border border-gray-200">
@@ -255,6 +256,30 @@ export const ObjectDetailPage = () => {
             </div>
           </div>
         )}
+
+        {/* Balance - Only for Directors */}
+        {isDirector && (() => {
+          const totalIncomes = incomes.reduce((sum, inc) => sum + inc.amount, 0);
+          const totalExpenses = invoices.reduce((sum, inv) => sum + inv.total, 0) + 
+            bankTransactions.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0) +
+            transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
+          const balance = totalIncomes - totalExpenses;
+          return (
+            <div className="bg-white rounded-xl p-4 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'} rounded-lg flex items-center justify-center`}>
+                  <Calculator className={`w-5 h-5 ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                </div>
+                <div>
+                  <p className={`text-xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {balance.toLocaleString('bg-BG')} €
+                  </p>
+                  <p className="text-xs text-gray-500">Баланс</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <div className="flex items-center gap-3">
