@@ -635,7 +635,7 @@ export const BankStatementsPage = () => {
                           <Calendar className="w-3 h-3" />
                           {tx.date}
                         </span>
-                        {tx.reference && <span className="text-xs">Реф: {tx.reference.slice(0, 20)}...</span>}
+                        {tx.reference && <span className="text-xs">Реф: {String(tx.reference).slice(0, 20)}...</span>}
                       </div>
 
                       {tx.purpose && (
