@@ -1,177 +1,221 @@
-# БАРИН АЛП System - Conversation State
-**Последна актуализация:** 4 януари 2026
+# BARIN ALP System - Състояние на проекта
+**Последна актуализация:** 11 януари 2026
 
-## 📋 Обобщение на проекта
+## Последни промени (11 януари 2026)
 
-**Проект:** PWA за управление на строителна фирма "БАРИН АЛП"
-- **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS
-- **Backend:** n8n workflows
-- **База данни:** Google Sheets (ID: `1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo`)
-- **URL на n8n:** `https://n8n.simeontsvetanovn8nworkflows.site`
-- **Deployed:** GitHub Pages - https://georgi-piskov.github.io/barin-alp-system/
+### ✅ Завършени функционалности
 
----
+#### 1. Ново групиране на банкови транзакции по тип операция
+Банковите транзакции сега се обработват по различен начин според **тип операция** от CSV файла:
 
-## ✅ Завършени задачи
+| Тип операция | Действие |
+|--------------|----------|
+| **Усвояване на кредит** | ❌ Пренебрегва се (не се показва) |
+| **Банково вземане лихва** | 📊 Групират се като "Лихви (X бр.)" |
+| **Банково вземане главница** | 💰 Групират се като "Главници по кредити (X бр.)" |
+| **Кредитен превод** | ✅ Остава отделно за разпределяне по обекти |
+| **Автоматична такса** | 🏦 Групират се като "Банкови такси (X бр.)" |
+| **Картови транзакции** | ✅ Остава отделно за разпределяне по обекти |
+| **Вътрешно банков превод** | ✅ Остава отделно за разпределяне по обекти |
+| **Издължаване на кредит** | ❌ Пренебрегва се (не се показва) |
 
-### 1. Dashboard включва банкови транзакции
-- Workflow 16 обновен да смята bank income/expenses в общите суми
+**Файлове променени:**
+- `n8n-workflows/17-parse-bank-statement.json` - нова логика за групиране
 
-### 2. CORS проблем с банкови транзакции - РЕШЕН
-- Проблем: PUT заявки блокирани от CORS preflight
-- Решение: Сменен на POST метод
-- Файлове:
-  - `src/config/api.ts` - endpoint: `/barin-alp/bank-transactions/update`
-  - `src/services/api.ts` - използва `api.post()` вместо `api.put()`
-  - `n8n-workflows/19-update-bank-transaction.json` - POST метод, id в body
+#### 2. Заприходяване на техници за кредитни транзакции
+За кредитни (входящи) преводи сега има възможност да се заприходят директно на техници:
 
-### 3. Inconsistent object expenses - РЕШЕН
-- Проблем: Разходите по обекти се смятаха различно на различни страници
-- Решение: Унифициран калкулация = фактури + банкови debit + кеш разходи
-- Файлове: `ObjectsPage.tsx`, `ObjectDetailPage.tsx`
+**Защо е нужно:**
+- Когато има превод директно в сметката на техник
+- Техникът после ще купи материали и ще вземе фактури
+- Ако се отнесе като разход за обект, разходът ще се дублира когато се въведат фактурите
 
-### 4. Comprehensive Object Detail View
-- Добавени секции за:
-  - Банкови плащания (с тотали)
-  - Касови транзакции (с тотали)
-  - Фактури
-  - Инвентар
-  - Техници
-- Stats grid с 5 карти
+**UI промени:**
+- Dropdown "Заприходи на техник" (само за credit транзакции)
+- Показва се името на техника ако е заприходен
+- Бутон "Създай приход" остава за създаване на приход за обект
 
-### 5. Google Sheets Quota Protection - РЕШЕН
-- Проблем: Error 429 "Too many requests" при много API calls
-- Решение:
-  - 30-секундно кеширане на API отговори
-  - Последователно зареждане с паузи (200-300ms)
-  - Комбиниран endpoint за object details
-- Файлове:
-  - `src/services/api.ts` - cache система + `getObjectDetails()` + `getObjectDetailsFallback()`
-  - `n8n-workflows/22-get-object-details.json` - комбиниран workflow
+**Файлове променени:**
+- `src/pages/BankStatements/BankStatementsPage.tsx` - добавен UI за техници
+- `src/types/index.ts` - добавени `technicianId`, `technicianName`, `operationType`
+- `src/services/api.ts` - обновен API метод за поддръжка на техници
+- `n8n-workflows/19-update-bank-transaction.json` - добавени полета за техници
 
-### 6. Bank Statement Parsing & Categorization
-- Категории: Банкови такси, Кредити, Преводи, Други
-- Collapsible секции с тотали
-- Object assignment за transfer expenses
+#### 3. Фиксирани грешки
+- ✅ Фикс за `reference.slice is not a function` - конвертиране на reference към string
+- ✅ Добавено начално зареждане (loading state) за избягване на бял екран
+- ✅ Try-catch блокове в useEffect hooks за robust error handling
 
-### 7. Role-Based Access Control (RBAC) - НОВ (4 ян 2026)
-- **Dashboard:**
-  - Техниците виждат САМО своя баланс (получени/изхарчени/остатък)
-  - Директорите виждат пълни финанси + баланси на всички техници
-  - Скрити секции за техници: "Баланси на техници", "Разходи по обекти"
-  
-- **ObjectsPage:**
-  - Техниците виждат само обекти, на които са assigned
-  - API вече филтрира по `userId` и `role`
-  
-- **ObjectDetailPage:**
-  - Security check: техник не може да достъпи обект, на който не е assigned
-  - Скрити за техници: Общи разходи, Банкови плащания, Касови транзакции
-  - Техниците виждат само фактури, които те са създали
-  - Инвентар - виждат всички (за да знаят къде е техниката)
-  
-- **TransactionsPage:**
-  - Техниците виждат само своите транзакции (userId === currentUser.id)
-  - Филтърът по техник е скрит за техници
-  
-- **InvoicesPage:**
-  - Техниците виждат само фактури за техните обекти или създадени от тях
-  - Филтърът "Проблемни фактури" е само за директори
-  
-- **InventoryPage:**
-  - БЕЗ ПРОМЯНА - техниците виждат всички обекти (нужно за заявки на техника)
+### 📋 Необходими действия от потребителя
+
+#### 🔴 ВАЖНО - Трябва да се направят:
+
+1. **Реимпортиране на n8n workflows:**
+   - `17-parse-bank-statement.json` - новото групиране по тип операция
+   - `19-update-bank-transaction.json` - добавена поддръжка за technicianId/technicianName
+
+2. **Добавяне на колони в Google Sheets:**
+   
+   Таблица **BankTransactions** трябва да има следните нови колони:
+   - `technicianId` (може да е празна)
+   - `technicianName` (може да е празна)
+   - `operationType` (за съхранение на типа операция от CSV)
+
+3. **Тестване:**
+   - Качване на банково извлечение от Asset Bank
+   - Проверка на групирането (лихви, главници, такси)
+   - Тест на заприходяване на техник
 
 ---
 
-## ⚠️ Pending Tasks (Чакащи действия от потребителя)
+## Технически детайли
 
-### 1. Обнови n8n workflow 19
-- Трябва да е POST метод
-- Path: `/barin-alp/bank-transactions/update`
-- ID се подава в body, не в URL
-
-### 2. Импортирай workflow 22 в n8n
-- Файл: `n8n-workflows/22-get-object-details.json`
-- Path: `/barin-alp/objects/:id/details`
-- Провери Google Sheets credentials
-
----
-
-## 📁 Ключови файлове
-
-### Frontend
-- `src/pages/Objects/ObjectDetailPage.tsx` - детайли на обект (всички данни)
-- `src/pages/Objects/ObjectsPage.tsx` - списък с обекти + калкулирани разходи
-- `src/pages/BankStatements/BankStatementsPage.tsx` - банкови извлечения
-- `src/services/api.ts` - API service с кеширане
-- `src/config/api.ts` - API endpoints конфигурация
-
-### n8n Workflows
-- `01-login.json` - автентикация
-- `02-get-objects.json` - списък обекти
-- `14-get-transactions.json` - касови транзакции
-- `16-get-dashboard-stats.json` - dashboard статистики
-- `17-parse-bank-statement.json` - парсиране на банково извлечение
-- `19-update-bank-transaction.json` - обновяване на банкова транзакция (POST!)
-- `20-get-bank-transactions.json` - списък банкови транзакции
-- `22-get-object-details.json` - комбиниран endpoint (НОВ)
-
----
-
-## 🗄️ Google Sheets Structure
-
-### BankTransactions колони (M-P за object assignment):
-- M: objectId
-- N: objectName
-- O: isCompanyExpense
-- P: status
-
-### Transactions колони:
-- objectId, objectName за връзка с обекти
-
----
-
-## 🐛 Известни проблеми
-
-1. **Quota limits** - Google Sheets има лимит 60 заявки/минута/потребител
-   - Решение: Кеширане + последователно зареждане
-   - Алтернатива: PostgreSQL/MySQL база данни
-
-2. **CORS** - n8n webhooks трябва да са настроени с `allowedOrigins: "*"`
-
----
-
-## 💡 Бъдещи подобрения
-
-1. Backend база данни вместо Google Sheets
-2. Push notifications
-3. Offline mode (Service Worker)
-4. Export to PDF/Excel
-5. Графики и статистики
-
----
-
-## 🔧 Команди за продължаване
-
-```bash
-# Стартиране на dev server
-cd "e:\VISUAL STUDIO\BARIN ALP_system"
-npm run dev
-
-# Build за production
-npm run build
-
-# Deploy
-git add -A
-git commit -m "описание"
-git push
+### Структура на проекта
+```
+BARIN ALP System
+├── React 18 + TypeScript + Vite
+├── Tailwind CSS за стилизация
+├── n8n workflows за backend логика
+└── Google Sheets като база данни
 ```
 
+### База данни (Google Sheets)
+**ID:** 1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo
+
+**Таблици:**
+- Users - потребители (директор, техници)
+- ConstructionObjects - строителни обекти
+- Invoices - фактури
+- Inventory - инвентар
+- Transactions - транзакции
+- Incomes - приходи
+- BankTransactions - банкови транзакции (нови колони: technicianId, technicianName, operationType)
+
+### n8n Backend
+**URL:** https://n8n.simeontsvetanovn8nworkflows.site/webhook
+
+**Workflows (общо 22):**
+- 01-22: Различни CRUD операции
+- 17: Parse Bank Statement (ОБНОВЕН - групиране по тип операция)
+- 19: Update Bank Transaction (ОБНОВЕН - поддръжка за техници)
+- 20: Get Bank Transactions
+
+### GitHub Repository
+- **Repo:** https://github.com/Georgi-Piskov/barin-alp-system.git
+- **Branch:** main
+- **Последен commit:** d3e6cc4 - "feat: Group transactions by operation type + technician assignment for credits"
+- **GitHub Pages:** Активен (deploy на всеки push)
+
 ---
 
-## 📝 Последни commits
+## История на функционалностите
 
-1. `d1bb7cd` - Add caching and quota protection
-2. `9532c67` - Add comprehensive object detail view
-3. Bank statement improvements
-4. CORS fix for bank transactions
+### Приходи (Incomes)
+- ✅ Пълна CRUD функционалност
+- ✅ Връзка с обекти
+- ✅ Показване в object cards и detail pages
+- ✅ Баланс на обекти (приходи - разходи)
+- ✅ Създаване на приход от банкова транзакция
+
+### Банкови извлечения
+- ✅ Качване на CSV от Asset Bank (windows-1251 encoding)
+- ✅ Парсване с групиране по тип операция
+- ✅ Плосък списък (без категории)
+- ✅ Филтри: тип (всички/дебит/кредит), само неразпределени
+- ✅ Редактиране на описание (inline)
+- ✅ Присвояване на обект (всички транзакции)
+- ✅ Заприходяване на техник (кредитни транзакции)
+- ✅ Създаване на приход (кредитни транзакции)
+- ✅ Визуална индикация за неразпределени (червен фон)
+
+### Dashboard
+- ✅ Статистика за обекти
+- ✅ Баланси на техници (включва фактури създадени от техници)
+- ✅ Общофирмени разходи
+
+### Обекти (Construction Objects)
+- ✅ CRUD операции
+- ✅ Детайлна страница с транзакции
+- ✅ Показване на приходи и баланс
+- ✅ Сортиране по активност
+
+### Фактури (Invoices)
+- ✅ CRUD операции
+- ✅ Връзка с обекти и техници
+- ✅ Статуси (pending, approved, rejected)
+- ✅ Филтри по обект и статус
+
+### Инвентар
+- ✅ CRUD операции
+- ✅ Връзка с обекти
+
+---
+
+## Известни проблеми и ограничения
+
+### Нуждаещи се от внимание:
+1. ⚠️ GitHub Pages може да има cache - използвай Ctrl+Shift+R за hard refresh
+2. ⚠️ CSV файловете от Asset Bank трябва да са в windows-1251 encoding
+3. ⚠️ При първо зареждане може да се появи "Зареждане..." екран
+
+### Бъдещи подобрения:
+- [ ] Offline support (PWA cache)
+- [ ] Bulk операции за банкови транзакции
+- [ ] Експорт на отчети (PDF/Excel)
+- [ ] Нотификации за нови фактури
+
+---
+
+## Как да продължиш работата
+
+### Стартиране на dev server:
+```powershell
+cd "e:\VISUAL STUDIO\BARIN ALP_system"
+npm run dev
+```
+URL: http://localhost:3000/barin-alp-system/
+
+### Билдване:
+```powershell
+npm run build
+```
+
+### Deploy:
+```powershell
+git add -A
+git commit -m "your message"
+git push
+```
+GitHub Pages автоматично deploy-ва след push.
+
+---
+
+## Контекст за AI асистента
+
+### Валута
+- EUR (€) навсякъде в приложението
+
+### Роли
+- **director** - пълен достъп
+- **technician** - ограничен достъп (обекти, фактури, инвентар)
+
+### Банкова система
+- Asset Bank
+- CSV формат със semicolon (;) разделител
+- Колони: IBAN, Дата, Дб/Кр, Сума, Валута, Наредител, Получател, Тип операция, Основание, Референция
+
+### Типове операции в банката:
+Вижте таблицата по-горе за детайлно описание на обработката.
+
+---
+
+## Следващи стъпки (когато продължим)
+
+1. Тестване на новото групиране на транзакции с реално банково извлечение
+2. Тестване на заприходяване на техници
+3. Евентуално добавяне на отчети/статистика за групираните транзакции
+4. Разглеждане на нови функционалности според нуждите на потребителя
+
+---
+
+**Забележка:** Всички промени са комитнати и пушнати към GitHub. Приложението е готово за тестване след реимпортиране на workflows и добавяне на новите колони в Google Sheets.
