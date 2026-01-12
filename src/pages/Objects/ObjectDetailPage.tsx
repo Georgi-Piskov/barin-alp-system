@@ -218,7 +218,68 @@ export const ObjectDetailPage = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className={`grid grid-cols-2 ${isDirector ? 'lg:grid-cols-7' : 'lg:grid-cols-3'} gap-4`}>
+      <div className={`grid grid-cols-2 ${isDirector ? 'lg:grid-cols-7' : 'lg:grid-cols-4'} gap-4`}>
+        {/* For Technicians - Show their own expenses, incomes and balance */}
+        {!isDirector && (() => {
+          const myInvoices = invoices.filter(inv => inv.createdBy === user?.id);
+          const myTransactions = transactions.filter(tx => tx.userId === user?.id && tx.type === 'expense');
+          const myIncomes = incomes.filter(inc => inc.createdBy === user?.id);
+          
+          const myExpenseTotal = myInvoices.reduce((sum, inv) => sum + inv.total, 0) + 
+                                 myTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+          const myIncomeTotal = myIncomes.reduce((sum, inc) => sum + inc.amount, 0);
+          const myBalance = myIncomeTotal - myExpenseTotal;
+          
+          return (
+            <>
+              {/* My Incomes */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-green-600">
+                      {myIncomeTotal.toLocaleString('bg-BG')} €
+                    </p>
+                    <p className="text-xs text-gray-500">Мои приходи</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* My Expenses */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                    <TrendingDown className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-red-600">
+                      {myExpenseTotal.toLocaleString('bg-BG')} €
+                    </p>
+                    <p className="text-xs text-gray-500">Мои разходи</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* My Balance */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 ${myBalance >= 0 ? 'bg-green-100' : 'bg-red-100'} rounded-lg flex items-center justify-center`}>
+                    <Calculator className={`w-5 h-5 ${myBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                  </div>
+                  <div>
+                    <p className={`text-xl font-bold ${myBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {myBalance.toLocaleString('bg-BG')} €
+                    </p>
+                    <p className="text-xs text-gray-500">Мой баланс</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+        
         {/* Total Incomes - Only for Directors */}
         {isDirector && (
           <div className="bg-white rounded-xl p-4 border border-gray-200">
@@ -578,6 +639,124 @@ export const ObjectDetailPage = () => {
       </div>
       )}
 
+      {/* Technician's Own Incomes Section */}
+      {!isDirector && (() => {
+        const myIncomes = incomes.filter(inc => inc.createdBy === user?.id);
+        if (myIncomes.length === 0) return null;
+        
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  Мои приходи ({myIncomes.length})
+                </h2>
+                <span className="text-lg font-bold text-green-600">
+                  +{myIncomes.reduce((sum, inc) => sum + inc.amount, 0).toLocaleString('bg-BG')} €
+                </span>
+              </div>
+            </div>
+            
+            <div className="p-4">
+              <div className="space-y-3">
+                {myIncomes.slice(0, 5).map((income) => (
+                  <div key={income.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{income.description || 'Приход'}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(income.date).toLocaleDateString('bg-BG')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-600">
+                        +{income.amount.toLocaleString('bg-BG')} €
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {myIncomes.length > 5 && (
+                  <Link 
+                    to="/incomes"
+                    className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                  >
+                    Виж всички {myIncomes.length} прихода →
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Technician's Own Transactions Section */}
+      {!isDirector && (() => {
+        const myTransactions = transactions.filter(tx => tx.userId === user?.id);
+        if (myTransactions.length === 0) return null;
+        
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Banknote className="w-5 h-5 text-orange-600" />
+                  Мои транзакции ({myTransactions.length})
+                </h2>
+                <span className="text-lg font-bold text-red-600">
+                  -{myTransactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0).toLocaleString('bg-BG')} €
+                </span>
+              </div>
+            </div>
+            
+            <div className="p-4">
+              <div className="space-y-3">
+                {myTransactions.slice(0, 5).map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        tx.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {tx.type === 'income' ? (
+                          <TrendingUp className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <TrendingDown className="w-5 h-5 text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{tx.description || (tx.type === 'income' ? 'Приход' : 'Разход')}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(tx.date).toLocaleDateString('bg-BG')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.type === 'income' ? '+' : '-'}{tx.amount.toLocaleString('bg-BG')} €
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {myTransactions.length > 5 && (
+                  <Link 
+                    to="/transactions"
+                    className="block text-center text-primary-600 hover:text-primary-700 font-medium py-2"
+                  >
+                    Виж всички {myTransactions.length} транзакции →
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Third row - Invoices & Inventory */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Invoices */}
@@ -627,16 +806,15 @@ export const ObjectDetailPage = () => {
                     Виж всички {displayInvoices.length} фактури →
                   </Link>
                 )}
-                {isDirector && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Общо по фактури:</span>
-                      <span className="font-bold text-gray-900">
-                        {displayInvoices.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('bg-BG')} €
-                      </span>
-                    </div>
+                {/* Show totals for both directors and technicians */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">{isDirector ? 'Общо по фактури:' : 'Мои фактури общо:'}</span>
+                    <span className="font-bold text-gray-900">
+                      {displayInvoices.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('bg-BG')} €
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
             );
           })()}

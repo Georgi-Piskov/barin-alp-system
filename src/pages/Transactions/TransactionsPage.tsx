@@ -31,6 +31,7 @@ interface TransactionModalProps {
 
 const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTransaction }: TransactionModalProps) => {
   const { user } = useAuthStore();
+  const isDirector = user?.role === 'director';
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [selectedUser, setSelectedUser] = useState<number>(0);
   const [selectedObject, setSelectedObject] = useState<number>(0);
@@ -73,7 +74,11 @@ const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTrans
     let targetUserId = selectedUser;
     let targetUserName = '';
     
-    if (selectedUser > 0) {
+    if (!isDirector) {
+      // Technician - always use their own info
+      targetUserId = user?.id || 0;
+      targetUserName = user?.name || '';
+    } else if (selectedUser > 0) {
       const targetUser = users.find(u => u.id === selectedUser);
       targetUserName = targetUser?.name || '';
     } else {
@@ -134,7 +139,8 @@ const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTrans
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Transaction Type */}
+          {/* Transaction Type - Only directors can create income (zaprihodyavane) */}
+          {isDirector ? (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Тип транзакция
@@ -166,8 +172,18 @@ const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTrans
               </button>
             </div>
           </div>
+          ) : (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-red-700">
+              <TrendingDown className="w-5 h-5" />
+              <span className="font-medium">Разход (кеш плащане)</span>
+            </div>
+            <p className="text-sm text-red-600 mt-1">Запиши разход, за който нямаш фактура</p>
+          </div>
+          )}
 
-          {/* User Selection - Required for income, optional for expense */}
+          {/* User Selection - Required for income, optional for expense (only for directors) */}
+          {isDirector && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {type === 'income' ? 'Техник *' : 'Техник (по избор)'}
@@ -193,6 +209,7 @@ const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTrans
               </p>
             )}
           </div>
+          )}
 
           {/* Amount */}
           <div>
@@ -245,26 +262,27 @@ const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTrans
             </div>
           </div>
 
-          {/* Object Selection - only for expenses */}
+          {/* Object Selection - for expenses (both directors and technicians) */}
           {type === 'expense' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Обект (по избор)
+                Обект {!isDirector && '*'}
               </label>
               <select
                 value={selectedObject}
                 onChange={(e) => setSelectedObject(Number(e.target.value))}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required={!isDirector}
               >
-                <option value={0}>-- Без обект --</option>
-                {objects.map((obj) => (
+                <option value={0}>{isDirector ? '-- Без обект --' : '-- Избери обект --'}</option>
+                {objects.filter(obj => isDirector || obj.assignedTechnicians?.includes(user?.id as number)).map((obj) => (
                   <option key={obj.id} value={obj.id}>
                     {obj.name}
                   </option>
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                🏗️ Избери обект ако разходът е свързан с конкретен обект
+                🏗️ {isDirector ? 'Избери обект ако разходът е свързан с конкретен обект' : 'Избери обекта, за който е направен разходът'}
               </p>
             </div>
           )}
@@ -307,7 +325,7 @@ const TransactionModal = ({ isOpen, onClose, users, objects, onSubmit, editTrans
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !amount || (type === 'income' && !selectedUser)}
+              disabled={isSubmitting || !amount || (type === 'income' && !selectedUser) || (!isDirector && !selectedObject)}
               className={`flex-1 px-4 py-3 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
                 type === 'income' 
                   ? 'bg-green-600 hover:bg-green-700' 
@@ -497,15 +515,13 @@ export const TransactionsPage = () => {
           >
             <RefreshCw className="w-5 h-5" />
           </button>
-          {isDirector && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Нова транзакция</span>
-            </button>
-          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">{isDirector ? 'Нова транзакция' : 'Добави разход'}</span>
+          </button>
         </div>
       </div>
 

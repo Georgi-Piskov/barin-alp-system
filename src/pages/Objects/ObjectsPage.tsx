@@ -83,25 +83,31 @@ export const ObjectsPage = () => {
         const incomes: Income[] = incomesRes.success && incomesRes.data ? incomesRes.data : [];
         
         // Calculate real expenses and incomes for each object
+        // For technicians: show only THEIR expenses and incomes
+        // For directors: show ALL expenses and incomes
+        const currentUserId = user?.id;
+        const isTechnician = user?.role === 'technician';
+        
         const objectsWithExpenses: ObjectWithExpenses[] = objectsRes.data.map(obj => {
-          // Sum invoices for this object
+          // Sum invoices for this object (filter by createdBy for technicians)
           const invoiceTotal = invoices
-            .filter(inv => inv.objectId === obj.id)
+            .filter(inv => inv.objectId === obj.id && (!isTechnician || inv.createdBy === currentUserId))
             .reduce((sum, inv) => sum + (inv.total || 0), 0);
           
           // Sum bank transactions (debit only) for this object
+          // For technicians: only show bank transactions they created (unlikely, but safe)
           const bankTotal = bankTransactions
-            .filter(tx => tx.objectId === obj.id && tx.type === 'debit')
+            .filter(tx => tx.objectId === obj.id && tx.type === 'debit' && (!isTechnician || tx.assignedBy === currentUserId))
             .reduce((sum, tx) => sum + (tx.amount || 0), 0);
           
-          // Sum cash transactions (expense only) for this object
+          // Sum cash transactions (expense only) for this object (filter by userId for technicians)
           const cashTotal = cashTransactions
-            .filter(tx => tx.objectId === obj.id && tx.type === 'expense')
+            .filter(tx => tx.objectId === obj.id && tx.type === 'expense' && (!isTechnician || tx.userId === currentUserId))
             .reduce((sum, tx) => sum + (tx.amount || 0), 0);
           
-          // Sum incomes for this object
+          // Sum incomes for this object (filter by createdBy for technicians)
           const incomeTotal = incomes
-            .filter(inc => inc.objectId === obj.id)
+            .filter(inc => inc.objectId === obj.id && (!isTechnician || inc.createdBy === currentUserId))
             .reduce((sum, inc) => sum + (inc.amount || 0), 0);
           
           const calculatedExpenses = invoiceTotal + bankTotal + cashTotal;
