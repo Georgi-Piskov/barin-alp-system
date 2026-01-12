@@ -1,14 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { Building2, Lock, User, Loader2, AlertCircle } from 'lucide-react';
+import { COMPANIES, Company } from '../../config/api';
+import { Building2, Lock, User, Loader2, AlertCircle, ChevronLeft } from 'lucide-react';
 
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const navigate = useNavigate();
   
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, company, setCompany } = useAuthStore();
+
+  // If already logged in, redirect to dashboard
+  useEffect(() => {
+    const stored = localStorage.getItem('barin-alp-auth');
+    if (stored) {
+      const state = JSON.parse(stored).state;
+      if (state?.isAuthenticated && state?.company) {
+        navigate('/dashboard');
+      }
+    }
+  }, [navigate]);
+
+  const handleCompanySelect = (selectedCompany: Company) => {
+    setCompany(selectedCompany);
+    clearError();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,16 +42,89 @@ export const LoginPage = () => {
     setPin(value);
   };
 
+  const handleBackToCompanies = () => {
+    setCompany(null as unknown as Company);
+    clearError();
+  };
+
+  // Company Selection Screen
+  if (!company) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-lg">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-4">
+              <Building2 className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Система за управление</h1>
+            <p className="text-gray-400">Изберете фирма за влизане</p>
+          </div>
+
+          {/* Company Selection */}
+          <div className="space-y-4">
+            {COMPANIES.map((comp) => (
+              <button
+                key={comp.id}
+                onClick={() => handleCompanySelect(comp)}
+                className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
+                  comp.color === 'primary'
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 border-primary-500 hover:from-primary-500 hover:to-primary-600'
+                    : 'bg-gradient-to-r from-orange-600 to-orange-700 border-orange-500 hover:from-orange-500 hover:to-orange-600'
+                } shadow-xl`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                    comp.color === 'primary' ? 'bg-primary-400/30' : 'bg-orange-400/30'
+                  }`}>
+                    <Building2 className="w-8 h-8 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h2 className="text-xl font-bold text-white">{comp.name}</h2>
+                    <p className="text-white/70 text-sm">Строителна фирма</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <p className="text-center text-gray-500 text-sm mt-8">
+            © 2024 Всички права запазени.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Login Form Screen
+  const themeColor = company.color === 'primary' ? 'primary' : 'orange';
+  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
+    <div className={`min-h-screen bg-gradient-to-br ${
+      themeColor === 'primary' 
+        ? 'from-primary-900 via-primary-800 to-primary-900' 
+        : 'from-orange-900 via-orange-800 to-orange-900'
+    } flex items-center justify-center p-4`}>
       <div className="w-full max-w-md">
+        {/* Back Button */}
+        <button
+          onClick={handleBackToCompanies}
+          className="mb-4 flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span>Друга фирма</span>
+        </button>
+
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-4">
+          <div className={`inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-4`}>
             <Building2 className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">БАРИН АЛП</h1>
-          <p className="text-primary-200">Система за управление</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{company.name}</h1>
+          <p className={`${themeColor === 'primary' ? 'text-primary-200' : 'text-orange-200'}`}>
+            Система за управление
+          </p>
         </div>
 
         {/* Login Form */}
@@ -69,9 +159,9 @@ export const LoginPage = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl 
-                           focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
-                           transition-all duration-200 bg-gray-50 focus:bg-white"
+                  className={`block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl 
+                           focus:ring-2 ${themeColor === 'primary' ? 'focus:ring-primary-500 focus:border-primary-500' : 'focus:ring-orange-500 focus:border-orange-500'}
+                           transition-all duration-200 bg-gray-50 focus:bg-white`}
                   placeholder="Въведете потребител"
                   required
                   autoComplete="username"
@@ -99,10 +189,10 @@ export const LoginPage = () => {
                   pattern="[0-9]*"
                   value={pin}
                   onChange={handlePinChange}
-                  className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl 
-                           focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
+                  className={`block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl 
+                           focus:ring-2 ${themeColor === 'primary' ? 'focus:ring-primary-500 focus:border-primary-500' : 'focus:ring-orange-500 focus:border-orange-500'}
                            transition-all duration-200 bg-gray-50 focus:bg-white
-                           tracking-[0.5em] text-center font-mono text-lg"
+                           tracking-[0.5em] text-center font-mono text-lg`}
                   placeholder="••••"
                   required
                   maxLength={4}
@@ -119,12 +209,14 @@ export const LoginPage = () => {
             <button
               type="submit"
               disabled={isLoading || !username || pin.length !== 4}
-              className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 
-                       text-white font-semibold rounded-xl shadow-lg 
-                       shadow-primary-500/30 hover:shadow-primary-500/40
+              className={`w-full py-3 px-4 ${
+                themeColor === 'primary'
+                  ? 'bg-primary-600 hover:bg-primary-700 shadow-primary-500/30 hover:shadow-primary-500/40'
+                  : 'bg-orange-600 hover:bg-orange-700 shadow-orange-500/30 hover:shadow-orange-500/40'
+              } text-white font-semibold rounded-xl shadow-lg 
                        transition-all duration-200 
                        disabled:opacity-50 disabled:cursor-not-allowed
-                       flex items-center justify-center gap-2"
+                       flex items-center justify-center gap-2`}
             >
               {isLoading ? (
                 <>
@@ -146,8 +238,8 @@ export const LoginPage = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-primary-300 text-sm mt-6">
-          © 2024 БАРИН АЛП. Всички права запазени.
+        <p className={`text-center ${themeColor === 'primary' ? 'text-primary-300' : 'text-orange-300'} text-sm mt-6`}>
+          © 2024 {company.name}. Всички права запазени.
         </p>
       </div>
     </div>

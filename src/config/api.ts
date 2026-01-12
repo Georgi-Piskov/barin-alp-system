@@ -1,11 +1,37 @@
 // n8n Backend Configuration
 // Update these URLs when you set up your n8n workflows
 
+// Company configurations
+export interface Company {
+  id: string;
+  name: string;
+  shortName: string;
+  sheetId: string;
+  color: string; // For UI distinction
+}
+
+export const COMPANIES: Company[] = [
+  {
+    id: 'barin-alp',
+    name: 'БАРИН АЛП',
+    shortName: 'БАРИН',
+    sheetId: '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo',
+    color: 'primary', // Blue theme
+  },
+  {
+    id: 'hefest',
+    name: 'ХЕФЕСТ ООД',
+    shortName: 'ХЕФЕСТ',
+    sheetId: '1TVx3m3sHJTYREf-wwUSj7mXobaelIpfqLTNB2-kwBps',
+    color: 'orange', // Orange theme to distinguish
+  },
+];
+
 export const API_CONFIG = {
   // Base URL for your n8n instance
   BASE_URL: import.meta.env.VITE_N8N_BASE_URL || 'https://n8n.simeontsvetanovn8nworkflows.site/webhook',
   
-  // Google Sheets ID
+  // Default Google Sheets ID (BARIN ALP) - will be overridden by company selection
   SPREADSHEET_ID: '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo',
   
   // Endpoints (these will be n8n webhook paths)

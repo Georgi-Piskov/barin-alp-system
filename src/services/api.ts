@@ -25,6 +25,26 @@ const api = axios.create({
 // Set to false when n8n backend is ready, or use env variable
 const DEMO_MODE = false; // n8n backend is now active!
 
+// Current sheetId - will be set when company is selected
+let currentSheetId = API_CONFIG.SPREADSHEET_ID;
+
+// Add sheetId to all requests automatically
+api.interceptors.request.use((config) => {
+  // Add sheetId to query params for GET requests
+  if (config.method === 'get') {
+    config.params = { ...config.params, sheetId: currentSheetId };
+  }
+  // Add sheetId to body for POST/PUT/DELETE requests
+  if (config.method === 'post' || config.method === 'put' || config.method === 'delete') {
+    if (config.data && typeof config.data === 'object') {
+      config.data = { ...config.data, sheetId: currentSheetId };
+    } else {
+      config.data = { sheetId: currentSheetId };
+    }
+  }
+  return config;
+});
+
 // ==================== CACHING ====================
 // Simple cache to reduce API calls and avoid quota limits
 interface CacheEntry<T> {
@@ -77,6 +97,18 @@ const MOCK_OBJECTS: ConstructionObject[] = [
 ];
 
 export const apiService = {
+  // ==================== SHEET ID MANAGEMENT ====================
+  setSheetId(sheetId: string) {
+    currentSheetId = sheetId;
+    // Clear cache when switching companies
+    clearCache();
+    console.log('API sheetId set to:', sheetId);
+  },
+  
+  getSheetId() {
+    return currentSheetId;
+  },
+
   // ==================== AUTH ====================
   async login(username: string, pin: string): Promise<ApiResponse<User>> {
     if (DEMO_MODE) {

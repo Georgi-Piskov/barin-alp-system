@@ -95,9 +95,9 @@ export const ObjectsPage = () => {
             .reduce((sum, inv) => sum + (inv.total || 0), 0);
           
           // Sum bank transactions (debit only) for this object
-          // For technicians: only show bank transactions they created (unlikely, but safe)
-          const bankTotal = bankTransactions
-            .filter(tx => tx.objectId === obj.id && tx.type === 'debit' && (!isTechnician || tx.assignedBy === currentUserId))
+          // Technicians don't see bank transactions (they are director-level)
+          const bankTotal = isTechnician ? 0 : bankTransactions
+            .filter(tx => tx.objectId === obj.id && tx.type === 'debit')
             .reduce((sum, tx) => sum + (tx.amount || 0), 0);
           
           // Sum cash transactions (expense only) for this object (filter by userId for technicians)

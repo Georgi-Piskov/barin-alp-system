@@ -2,13 +2,16 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../types';
 import { apiService } from '../services/api';
+import { Company } from '../config/api';
 
 interface AuthStore {
   user: User | null;
+  company: Company | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
   
+  setCompany: (company: Company) => void;
   login: (username: string, pin: string) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
@@ -16,13 +19,26 @@ interface AuthStore {
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
+      company: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
 
+      setCompany: (company: Company) => {
+        set({ company });
+        // Update apiService with the new sheetId
+        apiService.setSheetId(company.sheetId);
+      },
+
       login: async (username: string, pin: string) => {
+        const { company } = get();
+        if (!company) {
+          set({ error: 'Моля, изберете фирма' });
+          return false;
+        }
+        
         set({ isLoading: true, error: null });
         
         try {
@@ -57,6 +73,7 @@ export const useAuthStore = create<AuthStore>()(
           user: null,
           isAuthenticated: false,
           error: null,
+          // Keep company selected for convenience
         });
       },
 
@@ -68,8 +85,30 @@ export const useAuthStore = create<AuthStore>()(
       name: 'barin-alp-auth',
       partialize: (state) => ({
         user: state.user,
+        company: state.company,
         isAuthenticated: state.isAuthenticated,
       }),
     }
   )
 );
+
+// Initialize sheetId from localStorage on app load
+const initializeFromStorage = () => {
+  try {
+    const stored = localStorage.getItem('barin-alp-auth');
+    if (stored) {
+      const { state } = JSON.parse(stored);
+      if (state?.company?.sheetId) {
+        // Lazy import to avoid circular dependency
+        import('../services/api').then(({ apiService }) => {
+          apiService.setSheetId(state.company.sheetId);
+        });
+      }
+    }
+  } catch (e) {
+    console.error('Error initializing from storage:', e);
+  }
+};
+
+// Run initialization
+initializeFromStorage();
