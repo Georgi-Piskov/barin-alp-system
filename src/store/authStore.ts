@@ -4,6 +4,29 @@ import { User } from '../types';
 import { apiService } from '../services/api';
 import { Company, COMPANIES, setApiPrefix } from '../config/api';
 
+// Initialize apiPrefix SYNCHRONOUSLY before anything else runs
+const initializeApiPrefixSync = () => {
+  try {
+    const stored = localStorage.getItem('barin-alp-auth');
+    if (stored) {
+      const { state } = JSON.parse(stored);
+      if (state?.company?.id) {
+        const currentCompany = COMPANIES.find(c => c.id === state.company.id);
+        if (currentCompany) {
+          setApiPrefix(currentCompany.apiPrefix);
+          apiService.setSheetId(currentCompany.sheetId);
+          console.log(`Sync initialized for ${currentCompany.name}: apiPrefix=${currentCompany.apiPrefix}, sheetId=${currentCompany.sheetId}`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error in sync initialization:', e);
+  }
+};
+
+// Run IMMEDIATELY (synchronously)
+initializeApiPrefixSync();
+
 interface AuthStore {
   user: User | null;
   company: Company | null;
@@ -96,36 +119,3 @@ export const useAuthStore = create<AuthStore>()(
     }
   )
 );
-
-// Initialize sheetId and apiPrefix from localStorage on app load
-// IMPORTANT: Always use values from COMPANIES config, not from localStorage
-// This ensures updates to config take effect immediately
-const initializeFromStorage = () => {
-  try {
-    const stored = localStorage.getItem('barin-alp-auth');
-    if (stored) {
-      const { state } = JSON.parse(stored);
-      if (state?.company?.id) {
-        // Import COMPANIES and setApiPrefix to get the CURRENT config (not cached in localStorage)
-        import('../config/api').then(({ COMPANIES, setApiPrefix }) => {
-          // Find the company from COMPANIES config to get updated values
-          const currentCompany = COMPANIES.find(c => c.id === state.company.id);
-          if (currentCompany) {
-            // Set apiPrefix from COMPANIES config (always up-to-date)
-            setApiPrefix(currentCompany.apiPrefix);
-            // Use sheetId from COMPANIES config (always up-to-date)
-            import('../services/api').then(({ apiService }) => {
-              apiService.setSheetId(currentCompany.sheetId);
-              console.log(`Initialized for ${currentCompany.name}: apiPrefix=${currentCompany.apiPrefix}, sheetId=${currentCompany.sheetId}`);
-            });
-          }
-        });
-      }
-    }
-  } catch (e) {
-    console.error('Error initializing from storage:', e);
-  }
-};
-
-// Run initialization
-initializeFromStorage();
