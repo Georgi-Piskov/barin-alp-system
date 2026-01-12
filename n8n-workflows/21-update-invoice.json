@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get invoice data from body\nconst body = $input.item.json.body;\n\nconst invoiceId = parseInt(body.id);\nif (!invoiceId) {\n  return [{ json: { success: false, error: 'Invoice ID is required' } }];\n}\n\n// Prepare items as JSON string\nlet itemsJson = '';\nif (body.items && Array.isArray(body.items)) {\n  itemsJson = JSON.stringify(body.items);\n}\n\nreturn [{ \n  json: { \n    id: invoiceId,\n    date: body.date || '',\n    supplier: body.supplier || '',\n    invoiceNumber: body.invoiceNumber || '',\n    total: body.total || 0,\n    description: body.description || '',\n    createdBy: body.createdBy || '',\n    createdByName: body.createdByName || '',\n    objectId: body.objectId !== null && body.objectId !== undefined ? String(body.objectId) : '',\n    objectName: body.objectName || '',\n    items: itemsJson\n  } \n}];"
+        "jsCode": "// Get invoice data from body\nconst body = $input.item.json.body;\nconst sheetId = body.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\n\nconst invoiceId = parseInt(body.id);\nif (!invoiceId) {\n  return [{ json: { success: false, error: 'Invoice ID is required' } }];\n}\n\nlet itemsJson = '';\nif (body.items && Array.isArray(body.items)) {\n  itemsJson = JSON.stringify(body.items);\n}\n\nreturn [{ \n  json: { \n    sheetId,\n    id: invoiceId,\n    date: body.date || '',\n    supplier: body.supplier || '',\n    invoiceNumber: body.invoiceNumber || '',\n    total: body.total || 0,\n    description: body.description || '',\n    createdBy: body.createdBy || '',\n    createdByName: body.createdByName || '',\n    objectId: body.objectId !== null && body.objectId !== undefined ? String(body.objectId) : '',\n    objectName: body.objectName || '',\n    items: itemsJson\n  } \n}];"
       },
       "id": "prepare",
       "name": "Prepare Update",
@@ -32,7 +32,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {

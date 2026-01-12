@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $json.body;\nconst idToDelete = parseInt(body.id);\n\nif (!idToDelete) {\n  throw new Error('ID is required for deletion');\n}\n\nreturn [{ json: { idToDelete } }];"
+        "jsCode": "const body = $json.body;\nconst idToDelete = parseInt(body.id);\nconst sheetId = body.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\n\nif (!idToDelete) {\n  throw new Error('ID is required for deletion');\n}\n\nreturn [{ json: { idToDelete, sheetId } }];"
       },
       "id": "code-get-id",
       "name": "Get ID",
@@ -32,7 +32,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -70,7 +70,7 @@
         "operation": "delete",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get ID').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {

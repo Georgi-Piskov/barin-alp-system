@@ -19,10 +19,20 @@
     },
     {
       "parameters": {
+        "jsCode": "// Get sheetId from query params or use default (BARIN ALP)\nconst query = $('Webhook').first().json.query || {};\nconst sheetId = query.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\n\nreturn [{ json: { sheetId } }];"
+      },
+      "id": "code-get-sheetid",
+      "name": "Get SheetId",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [350, 300]
+    },
+    {
+      "parameters": {
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -59,7 +69,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get SheetId').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -96,7 +106,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get SheetId').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -133,7 +143,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get SheetId').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -170,7 +180,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get SheetId').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {

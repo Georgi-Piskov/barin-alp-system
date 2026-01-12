@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const objectId = $input.item.json.params.id;\nreturn [{ json: { objectId: parseInt(objectId) } }];"
+        "jsCode": "const objectId = $input.item.json.params.id;\nconst query = $input.item.json.query || {};\nconst sheetId = query.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\nreturn [{ json: { objectId: parseInt(objectId), sheetId } }];"
       },
       "id": "getParams",
       "name": "Get Params",
@@ -32,7 +32,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get Params').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -59,7 +59,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get Params').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -86,7 +86,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get Params').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -113,7 +113,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get Params').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -140,7 +140,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get Params').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -167,7 +167,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $('Get Params').first().json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {

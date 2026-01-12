@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $json.body;\n\nreturn [{\n  json: {\n    id: parseInt(body.id),\n    type: String(body.type),\n    userId: parseInt(body.userId) || 0,\n    userName: String(body.userName || ''),\n    amount: parseFloat(body.amount) || 0,\n    date: String(body.date),\n    description: String(body.description || ''),\n    createdBy: parseInt(body.createdBy) || 0,\n    createdByName: String(body.createdByName || ''),\n    method: String(body.method || 'cash'),\n    objectId: parseInt(body.objectId) || 0,\n    objectName: String(body.objectName || '')\n  }\n}];"
+        "jsCode": "const body = $json.body;\nconst sheetId = body.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\n\nreturn [{\n  json: {\n    sheetId,\n    id: parseInt(body.id),\n    type: String(body.type),\n    userId: parseInt(body.userId) || 0,\n    userName: String(body.userName || ''),\n    amount: parseFloat(body.amount) || 0,\n    date: String(body.date),\n    description: String(body.description || ''),\n    createdBy: parseInt(body.createdBy) || 0,\n    createdByName: String(body.createdByName || ''),\n    method: String(body.method || 'cash'),\n    objectId: parseInt(body.objectId) || 0,\n    objectName: String(body.objectName || '')\n  }\n}];"
       },
       "id": "code-format-input",
       "name": "Format Input",
@@ -32,7 +32,7 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {

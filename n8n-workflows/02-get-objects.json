@@ -19,10 +19,20 @@
     },
     {
       "parameters": {
+        "jsCode": "// Get sheetId from query params or use default (BARIN ALP)\nconst query = $('Webhook Get Objects').first().json.query;\nconst sheetId = query.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\n\nreturn [{ json: { sheetId, userId: query.userId, role: query.role } }];"
+      },
+      "id": "code-get-sheetid",
+      "name": "Get SheetId",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
@@ -37,7 +47,7 @@
       "name": "Read Objects",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.4,
-      "position": [470, 300],
+      "position": [690, 300],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "YOUR_GOOGLE_CREDENTIAL_ID",
@@ -53,7 +63,7 @@
       "name": "Format Objects",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [690, 300]
+      "position": [910, 300]
     },
     {
       "parameters": {
@@ -63,11 +73,22 @@
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [910, 300]
+      "position": [1130, 300]
     }
   ],
   "connections": {
     "Webhook Get Objects": {
+      "main": [
+        [
+          {
+            "node": "Get SheetId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get SheetId": {
       "main": [
         [
           {

@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook Update').first().json.body;\n\n// Serialize photos to JSON string\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{\n  json: {\n    id: body.id,\n    name: body.name,\n    category: body.category || 'Други',\n    status: body.status || 'available',\n    assignedTo: body.assignedTo || '',\n    assignedToName: body.assignedToName || '',\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    photos: photosJson\n  }\n}];"
+        "jsCode": "const body = $('Webhook Update').first().json.body;\nconst sheetId = body.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\n\n// Serialize photos to JSON string\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{ json: { sheetId, id: body.id, name: body.name, category: body.category || 'Други', status: body.status || 'available', assignedTo: body.assignedTo || '', assignedToName: body.assignedToName || '', objectId: body.objectId || '', objectName: body.objectName || '', photos: photosJson } }];"
       },
       "id": "code-prepare-update",
       "name": "Prepare Update",
@@ -32,7 +32,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "value": "={{ $json.sheetId }}",
           "mode": "id"
         },
         "sheetName": {
