@@ -22,7 +22,7 @@ export const COMPANIES: Company[] = [
     id: 'hefest',
     name: 'ХЕФЕСТ ООД',
     shortName: 'ХЕФЕСТ',
-    sheetId: '1TVx3m3sHJTYREf-wwUSj7mXobaelIpfqLTNB2-kwBps',
+    sheetId: '1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g',
     color: 'orange', // Orange theme to distinguish
   },
 ];
