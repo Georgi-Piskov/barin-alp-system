@@ -1,0 +1,412 @@
+{
+  "name": "BARIN-ALP: Get Object Details",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "barin-alp/objects/:id/details",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a3d1cdae-b938-42e1-aa52-cd0524a3f57b",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        208
+      ],
+      "webhookId": "barin-alp-object-details"
+    },
+    {
+      "parameters": {
+        "jsCode": "const objectId = $input.item.json.params.id;\nreturn [{ json: { objectId: parseInt(objectId) } }];"
+      },
+      "id": "79fbbcac-f3f0-498f-b0d3-a0996cdd40c2",
+      "name": "Get Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1423865567,
+          "mode": "list",
+          "cachedResultName": "OBJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1423865567"
+        },
+        "options": {}
+      },
+      "id": "8218326b-40f3-4e3b-bba3-4a115e6f920a",
+      "name": "Get Objects",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "0f71cac8-808f-443f-b930-d6c0bf07a0ca",
+      "name": "Get Users",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 352652288,
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=352652288"
+        },
+        "options": {}
+      },
+      "id": "83b75543-b722-42b6-852b-f8bb80151b5b",
+      "name": "Get Invoices",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1457620487,
+          "mode": "list",
+          "cachedResultName": "Inventory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1457620487"
+        },
+        "options": {}
+      },
+      "id": "ed6ef758-2e1a-457f-bac6-ac0028f8de01",
+      "name": "Get Inventory",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        464
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1018740023"
+        },
+        "options": {}
+      },
+      "id": "547db4df-e5ad-4826-93af-acecaa10043b",
+      "name": "Get Bank Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        608
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1526480435,
+          "mode": "list",
+          "cachedResultName": "Transactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1526480435"
+        },
+        "options": {}
+      },
+      "id": "7a05db37-c61f-425f-87ec-5ba01354331f",
+      "name": "Get Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        752
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 6
+      },
+      "id": "4faaa1cb-7717-4b59-b996-790ecae060a7",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        256,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all data from merged inputs\nconst allItems = $input.all().map(i => i.json);\nconst objectId = $('Get Params').first().json.objectId;\n\n// Separate data by source (based on field names)\nlet objects = [];\nlet users = [];\nlet invoices = [];\nlet inventory = [];\nlet bankTransactions = [];\nlet transactions = [];\n\nallItems.forEach(item => {\n  if (item.ID && item.NAME && item.STATUS) {\n    objects.push(item);\n  } else if (item.username && item.role) {\n    users.push(item);\n  } else if (item.invoiceNumber && item.supplier) {\n    invoices.push(item);\n  } else if (item.category && item.assignedTo !== undefined) {\n    inventory.push(item);\n  } else if (item.reference && item.counterpartyName !== undefined) {\n    bankTransactions.push(item);\n  } else if (item.userId && item.type && (item.type === 'income' || item.type === 'expense')) {\n    transactions.push(item);\n  }\n});\n\n// Find the specific object\nconst object = objects.find(o => parseInt(o.ID) === objectId);\n\nif (!object) {\n  return [{ json: { success: false, error: 'Object not found' } }];\n}\n\n// Parse assignedTechnicians\nlet assignedTechIds = [];\nif (object.assignedTechnicians) {\n  assignedTechIds = String(object.assignedTechnicians).split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));\n}\n\n// Filter data for this object\nconst objectInvoices = invoices.filter(inv => parseInt(inv.objectId) === objectId);\nconst objectInventory = inventory.filter(item => parseInt(item.objectId) === objectId);\nconst objectBankTx = bankTransactions.filter(tx => parseInt(tx.objectId) === objectId);\nconst objectTransactions = transactions.filter(tx => parseInt(tx.objectId) === objectId);\nconst technicians = users.filter(u => u.role === 'technician');\nconst assignedTechnicians = technicians.filter(t => assignedTechIds.includes(parseInt(t.id)));\n\n// Format the response\nconst result = {\n  success: true,\n  data: {\n    object: {\n      id: parseInt(object.ID),\n      name: object.NAME,\n      address: object.ADDRESS || '',\n      status: object.STATUS || 'active',\n      totalExpenses: parseFloat(object.totalExpenses) || 0,\n      assignedTechnicians: assignedTechIds\n    },\n    technicians: assignedTechnicians.map(t => ({\n      id: parseInt(t.id),\n      username: t.username,\n      name: t.name,\n      role: t.role\n    })),\n    invoices: objectInvoices.map(inv => ({\n      id: parseInt(inv.id),\n      date: inv.date,\n      supplier: inv.supplier,\n      invoiceNumber: inv.invoiceNumber,\n      total: parseFloat(inv.total) || 0,\n      description: inv.description || '',\n      objectId: parseInt(inv.objectId) || null,\n      objectName: inv.objectName || null\n    })),\n    inventory: objectInventory.map(item => ({\n      id: parseInt(item.id),\n      name: item.name,\n      category: item.category,\n      status: item.status || 'available',\n      assignedTo: item.assignedTo ? parseInt(item.assignedTo) : null,\n      assignedToName: item.assignedToName || null,\n      objectId: parseInt(item.objectId) || null,\n      objectName: item.objectName || null\n    })),\n    bankTransactions: objectBankTx.map(tx => ({\n      id: parseInt(tx.id),\n      reference: tx.reference,\n      date: tx.date,\n      type: tx.type,\n      amount: parseFloat(tx.amount) || 0,\n      category: tx.category,\n      displayName: tx.displayName,\n      counterpartyName: tx.counterpartyName,\n      invoiceRef: tx.invoiceRef,\n      objectId: parseInt(tx.objectId) || null,\n      objectName: tx.objectName || null\n    })),\n    transactions: objectTransactions.map(tx => ({\n      id: parseInt(tx.id),\n      type: tx.type,\n      userId: parseInt(tx.userId),\n      userName: tx.userName,\n      amount: parseFloat(tx.amount) || 0,\n      date: tx.date,\n      description: tx.description,\n      objectId: parseInt(tx.objectId) || null,\n      objectName: tx.objectName || null\n    }))\n  }\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "4907c86a-b5c1-417d-bddf-62dc4e91e04c",
+      "name": "Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "e45a29c4-de96-4c92-8293-84376c7d24b1",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Params": {
+      "main": [
+        [
+          {
+            "node": "Get Objects",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Users",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Invoices",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Inventory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Bank Transactions",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Objects": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Users": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Invoices": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Get Inventory": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Get Bank Transactions": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Get Transactions": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0c527369-83ab-4ebd-84b0-041e33b267a0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "Od6cEfGnt0Uxbt63",
+  "tags": []
+}

@@ -1,0 +1,261 @@
+{
+  "name": "BARIN-ALP: Create Object",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/objects/create",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "eda83abf-c681-4b7c-b776-f4ebbe116b80",
+      "name": "Webhook Create",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "barin-objects-create"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1423865567,
+          "mode": "list",
+          "cachedResultName": "OBJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1423865567"
+        },
+        "options": {}
+      },
+      "id": "f132c473-44de-49a9-85f3-876fc17b0793",
+      "name": "Read for Next ID",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const existingObjects = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Calculate next ID\nlet maxId = 0;\nexistingObjects.forEach(obj => {\n  const id = Number(obj.json.ID);\n  if (id > maxId) maxId = id;\n});\nconst newId = maxId + 1;\n\nreturn [{\n  json: {\n    ID: newId,\n    NAME: body.name,\n    ADDRESS: body.address,\n    STATUS: body.status || 'active',\n    totalExpenses: body.totalExpenses || 0,\n    assignedTechnicians: body.assignedTechnicians ? body.assignedTechnicians.join(',') : ''\n  }\n}];"
+      },
+      "id": "d5188345-308e-4a35-9677-0b44a4166b85",
+      "name": "Prepare Object",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1423865567,
+          "mode": "list",
+          "cachedResultName": "OBJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1423865567"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ADDRESS",
+              "displayName": "ADDRESS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "STATUS",
+              "displayName": "STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "totalExpenses",
+              "displayName": "totalExpenses",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "assignedTechnicians",
+              "displayName": "assignedTechnicians",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "bfe73480-044d-49a0-93e1-6170df5d824c",
+      "name": "Append to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const obj = $('Prepare Object').first().json;\nconst body = $('Webhook Create').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: obj.ID,\n      name: obj.NAME,\n      address: obj.ADDRESS,\n      status: obj.STATUS,\n      totalExpenses: obj.totalExpenses,\n      assignedTechnicians: body.assignedTechnicians || []\n    }\n  }\n}];"
+      },
+      "id": "52466b81-3a56-42da-9002-9dee43725b1c",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "3e97bf75-b5d4-44bc-bfe9-a494a525952b",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1104,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Create": {
+      "main": [
+        [
+          {
+            "node": "Read for Next ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read for Next ID": {
+      "main": [
+        [
+          {
+            "node": "Prepare Object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Object": {
+      "main": [
+        [
+          {
+            "node": "Append to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cd2cb94f-e4ec-4bfc-90ee-058c5ef68fe1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "b2RTnHFoc4Gcmzfs",
+  "tags": []
+}

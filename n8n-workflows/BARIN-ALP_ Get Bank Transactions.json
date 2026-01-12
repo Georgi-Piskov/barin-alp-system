@@ -1,0 +1,130 @@
+{
+  "name": "BARIN-ALP: Get Bank Transactions",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "barin-alp/bank-transactions",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "91745a4e-2066-4bcd-b490-73a5f7cfa726",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "barin-alp-bank-transactions-get"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1018740023"
+        },
+        "options": {}
+      },
+      "id": "402f0d2d-85be-4a57-9f4c-5d732250424b",
+      "name": "Read Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all transactions and calculate stats\nconst items = $input.all();\n\nconst transactions = items.map(item => ({\n  id: parseInt(item.json.id) || 0,\n  reference: item.json.reference || '',\n  date: item.json.date || '',\n  type: item.json.type || 'debit',\n  amount: parseFloat(item.json.amount) || 0,\n  currency: item.json.currency || 'BGN',\n  category: item.json.category || 'other',\n  description: item.json.description || '',\n  displayName: item.json.displayName || '',\n  counterpartyName: item.json.counterpartyName || '',\n  invoiceRef: item.json.invoiceRef || '',\n  purpose: item.json.purpose || '',\n  objectId: item.json.objectId ? parseInt(item.json.objectId) : null,\n  objectName: item.json.objectName || '',\n  isCompanyExpense: item.json.isCompanyExpense === 'TRUE',\n  status: item.json.status || 'unmatched',\n  importDate: item.json.importDate || ''\n}));\n\n// Sort by date descending\ntransactions.sort((a, b) => b.date.localeCompare(a.date));\n\n// Calculate stats\nconst totalDebit = transactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst totalCredit = transactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);\nconst cashWithdrawalTotal = transactions.filter(t => t.category === 'cash_withdrawal' && t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst bankFeesTotal = transactions.filter(t => t.category === 'bank_fees' && t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst loanPaymentsTotal = transactions.filter(t => t.category === 'loan_payment' && t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst netChange = totalCredit - totalDebit;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      transactions,\n      count: transactions.length,\n      totalDebit: Math.round(totalDebit * 100) / 100,\n      totalCredit: Math.round(totalCredit * 100) / 100,\n      cashWithdrawalTotal: Math.round(cashWithdrawalTotal * 100) / 100,\n      bankFeesTotal: Math.round(bankFeesTotal * 100) / 100,\n      loanPaymentsTotal: Math.round(loanPaymentsTotal * 100) / 100,\n      netChange: Math.round(netChange * 100) / 100\n    }\n  }\n}];"
+      },
+      "id": "ca4f80dc-3ea6-44bb-b847-7903869b922e",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "82040176-7ab5-407b-b428-e3560f3202a4",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        608,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Transactions": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0ae191d3-dde8-4ab3-aa53-5be4bd9d6842",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "BReoDGXgr3XbKqfK",
+  "tags": []
+}

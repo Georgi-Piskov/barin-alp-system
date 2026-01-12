@@ -1,0 +1,293 @@
+{
+  "name": "BARIN-ALP: Update Invoice",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "barin-alp/invoices/update",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "02d15791-a87c-4507-93cd-9fe955b4c7e3",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "barin-alp-invoice-update"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get invoice data from body\nconst body = $input.item.json.body;\n\nconst invoiceId = parseInt(body.id);\nif (!invoiceId) {\n  return [{ json: { success: false, error: 'Invoice ID is required' } }];\n}\n\n// Prepare items as JSON string\nlet itemsJson = '';\nif (body.items && Array.isArray(body.items)) {\n  itemsJson = JSON.stringify(body.items);\n}\n\nreturn [{ \n  json: { \n    id: invoiceId,\n    date: body.date || '',\n    supplier: body.supplier || '',\n    invoiceNumber: body.invoiceNumber || '',\n    total: body.total || 0,\n    description: body.description || '',\n    createdBy: body.createdBy || '',\n    createdByName: body.createdByName || '',\n    objectId: body.objectId !== null && body.objectId !== undefined ? String(body.objectId) : '',\n    objectName: body.objectName || '',\n    items: itemsJson\n  } \n}];"
+      },
+      "id": "ef61582b-e3e2-445c-9257-a469defb2133",
+      "name": "Prepare Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 352652288,
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=352652288"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "date": "={{ $json.date }}",
+            "supplier": "={{ $json.supplier }}",
+            "invoiceNumber": "={{ $json.invoiceNumber }}",
+            "total": "={{ $json.total }}",
+            "description": "={{ $json.description }}",
+            "createdBy": "={{ $json.createdBy }}",
+            "createdByName": "={{ $json.createdByName }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "items": "={{ $json.items }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier",
+              "displayName": "supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoiceNumber",
+              "displayName": "invoiceNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "createdBy",
+              "displayName": "createdBy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "createdByName",
+              "displayName": "createdByName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectId",
+              "displayName": "objectId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectName",
+              "displayName": "objectName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "items",
+              "displayName": "items",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "0b21a88e-0187-45ba-9061-6520079eaa83",
+      "name": "Update Invoice",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        400,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Prepare Update').first().json;\n\n// Parse items back\nlet items = [];\ntry {\n  if (input.items) {\n    items = JSON.parse(input.items);\n  }\n} catch (e) {}\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: input.id,\n      date: input.date,\n      supplier: input.supplier,\n      invoiceNumber: input.invoiceNumber,\n      total: input.total,\n      description: input.description,\n      createdBy: input.createdBy,\n      createdByName: input.createdByName,\n      objectId: input.objectId ? parseInt(input.objectId) : null,\n      objectName: input.objectName,\n      items: items\n    }\n  }\n}];"
+      },
+      "id": "a5887e99-869f-4c1a-ab00-1b105e90d2aa",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "e05655ff-754f-4634-b8dc-ce4b371e79cd",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update": {
+      "main": [
+        [
+          {
+            "node": "Update Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Invoice": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5a743875-a562-4e2e-b3e8-2e28e42e37e0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "kev4HKkSp1UVZIuZ",
+  "tags": []
+}

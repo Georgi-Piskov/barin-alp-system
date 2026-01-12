@@ -1,0 +1,167 @@
+﻿{
+  "name": "HEFEST: Get Objects",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "hefest/objects",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "cb698fdf-7f2c-47de-bc25-8f58ac17915c",
+      "name": "Webhook Get Objects",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "hefest-objects-get"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1423865567,
+          "mode": "list",
+          "cachedResultName": "OBJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1423865567"
+        },
+        "options": {}
+      },
+      "id": "0403b2ff-68d4-4124-bd04-630a34629d60",
+      "name": "Read Objects",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const objects = $input.all();\n\nconst formattedObjects = objects.map(obj => {\n  let techs = obj.json.assignedTechnicians;\n  let techArray = [];\n  \n  if (techs !== undefined && techs !== null && techs !== '') {\n    // РђРєРѕ Рµ С‡РёСЃР»Рѕ, РЅР°РїСЂР°РІРё РіРѕ РјР°СЃРёРІ СЃ РµРґРЅРѕ С‡РёСЃР»Рѕ\n    if (typeof techs === 'number') {\n      techArray = [techs];\n    } \n    // РђРєРѕ Рµ string, СЂР°Р·РґРµР»Рё РїРѕ Р·Р°РїРµС‚Р°СЏ\n    else if (typeof techs === 'string') {\n      techs = techs.replace(/[\\[\\]]/g, '').trim();\n      techArray = techs.split(',').map(Number).filter(n => !isNaN(n));\n    }\n    // РђРєРѕ РІРµС‡Рµ Рµ РјР°СЃРёРІ\n    else if (Array.isArray(techs)) {\n      techArray = techs;\n    }\n  }\n  \n  return {\n    id: Number(obj.json.ID),\n    name: obj.json.NAME,\n    address: obj.json.ADDRESS || '',\n    status: obj.json.STATUS || 'active',\n    totalExpenses: Number(obj.json.totalExpenses) || 0,\n    assignedTechnicians: techArray\n  };\n});\n\nreturn [{ json: { data: formattedObjects } }];"
+      },
+      "id": "a74d6f68-be27-48eb-b150-198c6fcd4faf",
+      "name": "Format Objects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "87565948-71fb-419a-80b4-ceb3957bd376",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        0
+      ]
+    }
+  ],
+  "pinData": {
+    "Webhook Get Objects": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.simeontsvetanovn8nworkflows.site",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "origin": "https://georgi-piskov.github.io",
+            "priority": "u=1, i",
+            "referer": "https://georgi-piskov.github.io/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "193.68.133.158",
+            "x-forwarded-host": "n8n.simeontsvetanovn8nworkflows.site",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "c0d433b98e98",
+            "x-real-ip": "193.68.133.158"
+          },
+          "params": {},
+          "query": {
+            "userId": "1",
+            "role": "director"
+          },
+          "body": {},
+          "webhookUrl": "https://n8n.simeontsvetanovn8nworkflows.site/webhook/hefest/objects",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook Get Objects": {
+      "main": [
+        [
+          {
+            "node": "Read Objects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Objects": {
+      "main": [
+        [
+          {
+            "node": "Format Objects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Objects": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "53c6083e-fb1f-4af3-995b-02c3b8d67fa7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "7ioDIbeIeRTzVhmH",
+  "tags": []
+}

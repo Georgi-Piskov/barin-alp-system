@@ -1,0 +1,264 @@
+{
+  "name": "BARIN-ALP: Delete Invoice",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "barin-alp/invoices/delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "c642165d-33bd-4839-910e-ab81fe95db35",
+      "name": "Webhook Delete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "barin-invoices-delete"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst idToDelete = parseInt(body.id);\n\nif (!idToDelete) {\n  throw new Error('ID is required for deletion');\n}\n\nreturn [{ json: { idToDelete } }];"
+      },
+      "id": "a7dad356-6bb9-4974-a0ab-92fa09bd6061",
+      "name": "Get ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "list",
+          "cachedResultName": "BARIN_ALP_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 352652288,
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=352652288"
+        },
+        "options": {}
+      },
+      "id": "0c965e2a-2ce8-41b8-b781-0847ac5f1207",
+      "name": "Read Invoices",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst idToDelete = $('Get ID').first().json.idToDelete;\n\n// Find row number (1-indexed, +2 for header and 0-index)\nlet rowToDelete = -1;\nfor (let i = 0; i < items.length; i++) {\n  if (parseInt(items[i].json.id) === idToDelete) {\n    rowToDelete = i + 2; // +1 for header, +1 for 1-indexing\n    break;\n  }\n}\n\nif (rowToDelete === -1) {\n  throw new Error('Invoice not found with ID: ' + idToDelete);\n}\n\nreturn [{ json: { rowToDelete, idToDelete } }];"
+      },
+      "id": "f55d42dd-eeeb-4212-85b3-7c780223fe8e",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 352652288,
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=352652288"
+        },
+        "startIndex": "={{ $json.rowToDelete }}"
+      },
+      "id": "bd35f570-ad6a-452c-8716-46cea88b2553",
+      "name": "Delete Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true,\n    message: 'Invoice deleted successfully'\n  }\n}];"
+      },
+      "id": "64f301c4-2ee3-470c-a998-21faddbc2a23",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "d6df1864-e9a2-4753-bcc3-b162e6dfe0f1",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        0
+      ]
+    }
+  ],
+  "pinData": {
+    "Webhook Delete": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.simeontsvetanovn8nworkflows.site",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "content-length": "8",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "content-type": "application/json",
+            "origin": "https://georgi-piskov.github.io",
+            "priority": "u=1, i",
+            "referer": "https://georgi-piskov.github.io/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "193.68.133.158",
+            "x-forwarded-host": "n8n.simeontsvetanovn8nworkflows.site",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "c0d433b98e98",
+            "x-real-ip": "193.68.133.158"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "id": 3
+          },
+          "webhookUrl": "https://n8n.simeontsvetanovn8nworkflows.site/webhook/barin-alp/invoices/delete",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook Delete": {
+      "main": [
+        [
+          {
+            "node": "Get ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ID": {
+      "main": [
+        [
+          {
+            "node": "Read Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Invoices": {
+      "main": [
+        [
+          {
+            "node": "Find Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row": {
+      "main": [
+        [
+          {
+            "node": "Delete Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Row": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e46b49b2-0307-49a2-baa3-317834dedf37",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "0bRPGDXHdxnQIQVE",
+  "tags": []
+}

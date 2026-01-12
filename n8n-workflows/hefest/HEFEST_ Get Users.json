@@ -1,0 +1,127 @@
+﻿{
+  "name": "HEFEST: Get Users",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "hefest/users",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b4682ebe-e630-4936-b886-6785ab7e264b",
+      "name": "Webhook Get Users",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "hefest-users-get"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "c75b6692-784f-4494-8e4d-6bd864135087",
+      "name": "Read Users",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $input.all();\n\nconst formattedUsers = users.map(user => ({\n  id: Number(user.json.id),\n  username: user.json.username,\n  name: user.json.name,\n  role: user.json.role,\n  pin: String(user.json.pin)\n}));\n\nreturn [{ json: { data: formattedUsers } }];"
+      },
+      "id": "12e678df-7a16-460f-833e-98fc8c84ee84",
+      "name": "Format Users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "3bf708a4-e4ca-4734-9b60-0fda76e738cc",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Get Users": {
+      "main": [
+        [
+          {
+            "node": "Read Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Users": {
+      "main": [
+        [
+          {
+            "node": "Format Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Users": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "954506b7-c166-491d-855e-163406594fcf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "fTWXeB78ScxSFsWe",
+  "tags": []
+}

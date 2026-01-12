@@ -1,0 +1,154 @@
+{
+  "name": "BARIN-ALP: Login",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/login",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "618e9728-dedb-4b31-8d9c-43585335e521",
+      "name": "Webhook Login",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        384
+      ],
+      "webhookId": "barin-login"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get sheetId from request body or use default (BARIN ALP)\nconst body = $('Webhook Login').first().json.body;\nconst sheetId = body.sheetId || '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo';\n\nreturn [{ json: { sheetId, username: body.username, pin: body.pin } }];"
+      },
+      "id": "039cac57-8cd4-412d-bc71-22ed3294ef48",
+      "name": "Get SheetId",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "list",
+          "cachedResultName": "BARIN_ALP_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "211b3ffa-aa42-4f2d-a0f5-312cb11d0c9a",
+      "name": "Read Users",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        336,
+        384
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $input.all();\nconst { username, pin } = $('Get SheetId').first().json;\n\nconst user = users.find(u => \n  u.json.username === username && \n  String(u.json.pin) === String(pin)\n);\n\nif (user) {\n  return [{\n    json: {\n      success: true,\n      data: {\n        id: user.json.id,\n        username: user.json.username,\n        name: user.json.name,\n        role: user.json.role,\n        pin: user.json.pin\n      }\n    }\n  }];\n} else {\n  return [{\n    json: {\n      success: false,\n      error: 'Грешно потребителско име или ПИН'\n    }\n  }];\n}"
+      },
+      "id": "6a9d9732-7c91-43f6-a1ce-173d1dffdd44",
+      "name": "Check Credentials",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "fa2ff2a3-9c70-4697-859c-4066950a444a",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        768,
+        384
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Login": {
+      "main": [
+        [
+          {
+            "node": "Get SheetId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get SheetId": {
+      "main": [
+        [
+          {
+            "node": "Read Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Users": {
+      "main": [
+        [
+          {
+            "node": "Check Credentials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Credentials": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ad710651-44c4-4864-98de-003b8ff3063b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "EJcARGgFOUsCpHSl",
+  "tags": []
+}

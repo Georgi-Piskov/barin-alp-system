@@ -1,0 +1,127 @@
+﻿{
+  "name": "HEFEST: Get Invoices",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "hefest/invoices",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "cd9031bd-c9e6-4161-92cb-a6121d483e3e",
+      "name": "Webhook Get Invoices1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        144,
+        144
+      ],
+      "webhookId": "hefest-invoices-get"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 352652288,
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=352652288"
+        },
+        "options": {}
+      },
+      "id": "fcad33e7-f828-415c-aeff-4e251e9081b5",
+      "name": "Read Invoices1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        368,
+        144
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\nconst invoices = rows.map(row => {\n  // Parse items from JSON string\n  let items = [];\n  if (row.json.items) {\n    try {\n      items = JSON.parse(row.json.items);\n    } catch (e) {\n      items = [];\n    }\n  }\n  \n  return {\n    id: Number(row.json.id),\n    date: row.json.date || '',\n    supplier: row.json.supplier || '',\n    invoiceNumber: row.json.invoiceNumber || '',\n    total: Number(row.json.total) || 0,\n    description: row.json.description || '',\n    createdBy: Number(row.json.createdBy) || 0,\n    createdByName: row.json.createdByName || '',\n    objectId: row.json.objectId ? Number(row.json.objectId) : null,\n    objectName: row.json.objectName || null,\n    items: items\n  };\n});\n\nreturn [{ json: { data: invoices } }];"
+      },
+      "id": "9265460f-177c-41c0-b31b-6bcfb96a8046",
+      "name": "Format Invoices1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "af3d3fe0-79a7-4ca7-bb0a-c7013fd6d510",
+      "name": "Respond1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        816,
+        144
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Get Invoices1": {
+      "main": [
+        [
+          {
+            "node": "Read Invoices1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Invoices1": {
+      "main": [
+        [
+          {
+            "node": "Format Invoices1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Invoices1": {
+      "main": [
+        [
+          {
+            "node": "Respond1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fbfc2cf9-da5e-4c79-aa71-315b4bcc9e03",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "xMOrGWbtLnHC0PS9",
+  "tags": []
+}

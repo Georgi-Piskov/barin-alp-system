@@ -1,0 +1,297 @@
+﻿{
+  "name": "HEFEST: Create Income",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hefest/incomes/create",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "77550cd4-6bfe-42a5-b62b-69891dce7238",
+      "name": "Webhook Create",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "hefest-incomes-create"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 138339154,
+          "mode": "list",
+          "cachedResultName": "INCOMES",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=138339154"
+        },
+        "options": {}
+      },
+      "id": "a96d30c0-db5f-41a1-8eb0-62944387604b",
+      "name": "Read For ID",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Generate new ID\nlet maxId = 0;\nfor (const row of rows) {\n  const id = Number(row.json.id) || 0;\n  if (id > maxId) maxId = id;\n}\nconst newId = maxId + 1;\n\nreturn [{\n  json: {\n    id: newId,\n    date: body.date || new Date().toISOString().split('T')[0],\n    amount: Number(body.amount) || 0,\n    description: body.description || '',\n    objectId: body.objectId ? Number(body.objectId) : '',\n    objectName: body.objectName || '',\n    createdBy: Number(body.createdBy) || 0,\n    createdByName: body.createdByName || '',\n    bankTransactionId: body.bankTransactionId ? Number(body.bankTransactionId) : ''\n  }\n}];"
+      },
+      "id": "38c5c58c-5e09-43d1-b259-2a74c7b1d16e",
+      "name": "Prepare Income",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 138339154,
+          "mode": "list",
+          "cachedResultName": "INCOMES",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=138339154"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "date": "={{ $json.date }}",
+            "amount": "={{ $json.amount }}",
+            "description": "={{ $json.description }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "createdBy": "={{ $json.createdBy }}",
+            "createdByName": "={{ $json.createdByName }}",
+            "bankTransactionId": "={{ $json.bankTransactionId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectId",
+              "displayName": "objectId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectName",
+              "displayName": "objectName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "createdBy",
+              "displayName": "createdBy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "createdByName",
+              "displayName": "createdByName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bankTransactionId",
+              "displayName": "bankTransactionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "900ed253-cd0b-4e0f-b7b4-5063cfc0460a",
+      "name": "Append Income",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const income = $('Prepare Income').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    data: income\n  }\n}];"
+      },
+      "id": "55556d75-779d-4053-8707-b67f52c66cdb",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e299c253-c5ab-4429-a5ef-e6b783105075",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1104,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Create": {
+      "main": [
+        [
+          {
+            "node": "Read For ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read For ID": {
+      "main": [
+        [
+          {
+            "node": "Prepare Income",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Income": {
+      "main": [
+        [
+          {
+            "node": "Append Income",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Income": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fe395690-57a9-481a-a2d3-b5011e159d2f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "yyHNpNTNMtWz67sp",
+  "tags": []
+}

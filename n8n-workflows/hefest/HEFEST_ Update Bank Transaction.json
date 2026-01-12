@@ -1,0 +1,236 @@
+﻿{
+  "name": "HEFEST: Update Bank Transaction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hefest/bank-transactions/update",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "5b0a3508-b7ec-421d-a1c7-4646a9caeff1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3744,
+        1824
+      ],
+      "webhookId": "barin-alp-bank-transaction-update"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\n\nconst transactionId = body.id;\nconst objectId = body.objectId;\nconst objectName = body.objectName || '';\nconst status = body.status || 'matched';\nconst displayName = body.displayName;\nconst technicianId = body.technicianId;\nconst technicianName = body.technicianName;\n\nconsole.log('Update Bank Transaction - Input:', body);\n\nif (!transactionId) {\n  throw new Error('Transaction ID is required');\n}\n\nconst result = { \n  id: parseInt(transactionId),\n  objectId: objectId !== null && objectId !== undefined ? String(objectId) : '',\n  objectName: objectName,\n  status: status\n};\n\n// Only include optional fields if provided\nif (displayName !== undefined) {\n  result.displayName = displayName;\n}\nif (technicianId !== undefined) {\n  result.technicianId = technicianId !== null ? String(technicianId) : '';\n}\nif (technicianName !== undefined) {\n  result.technicianName = technicianName || '';\n}\n\nreturn [{ json: result }];"
+      },
+      "id": "efd13ac9-594c-4db9-b72f-bb43bf598ff5",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3552,
+        1824
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "BankTransactions",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "status": "={{ $json.status }}",
+            "displayName": "={{ $json.displayName }}",
+            "technicianId": "={{ $json.technicianId }}",
+            "technicianName": "={{ $json.technicianName }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectId",
+              "displayName": "objectId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "objectName",
+              "displayName": "objectName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "displayName",
+              "displayName": "displayName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technicianId",
+              "displayName": "technicianId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "technicianName",
+              "displayName": "technicianName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "3222d441-4a28-4212-b23b-df7d0d22f09a",
+      "name": "Update Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3344,
+        1824
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Prepare Data').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: 'РўСЂР°РЅР·Р°РєС†РёСЏ РѕР±РЅРѕРІРµРЅР° СѓСЃРїРµС€РЅРѕ',\n    transactionId: input.id,\n    objectId: input.objectId,\n    objectName: input.objectName,\n    status: input.status\n  }\n}];"
+      },
+      "id": "31f857bc-d29d-483b-ab9d-3dcefc1f799a",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3152,
+        1824
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "b5f3db0d-cbe3-403d-aa6f-7d467c517b36",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -2944,
+        1824
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Update Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sheet": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e12379de-44e3-4c08-87d5-04a1199230fb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "RImK0d43ALVuP5ae",
+  "tags": []
+}

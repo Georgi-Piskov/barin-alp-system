@@ -1,0 +1,128 @@
+{
+  "name": "BARIN-ALP: Get Incomes",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "barin-alp/incomes",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "45e32d8e-8d61-4dec-bcc5-36d711d1863e",
+      "name": "Webhook Get Incomes",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "barin-incomes-get"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 138339154,
+          "mode": "list",
+          "cachedResultName": "INCOMES",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=138339154"
+        },
+        "options": {}
+      },
+      "id": "e1895f7f-2a98-4e8d-92b5-4042265303b7",
+      "name": "Read Incomes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\nconst incomes = rows.map(row => ({\n  id: Number(row.json.id),\n  date: row.json.date || '',\n  amount: Number(row.json.amount) || 0,\n  description: row.json.description || '',\n  objectId: row.json.objectId ? Number(row.json.objectId) : null,\n  objectName: row.json.objectName || null,\n  createdBy: Number(row.json.createdBy) || 0,\n  createdByName: row.json.createdByName || '',\n  bankTransactionId: row.json.bankTransactionId ? Number(row.json.bankTransactionId) : null\n}));\n\nreturn [{ json: { data: incomes } }];"
+      },
+      "id": "21646f0a-6e51-4b2d-b6ce-a8fd7b3fbcfa",
+      "name": "Format Incomes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "0c8bf667-f022-49fb-ab6d-f7452d591461",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Get Incomes": {
+      "main": [
+        [
+          {
+            "node": "Read Incomes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Incomes": {
+      "main": [
+        [
+          {
+            "node": "Format Incomes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Incomes": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d4891b09-f416-452c-b8a9-e11e16d1a779",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "YQ6nji1OMLdtZuxT",
+  "tags": []
+}

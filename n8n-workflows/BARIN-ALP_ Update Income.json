@@ -1,0 +1,310 @@
+{
+  "name": "BARIN-ALP: Update Income",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PUT",
+        "path": "barin-alp/incomes/update",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "95d742ba-be48-439c-9b14-5b6878c8d196",
+      "name": "Webhook Update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "barin-incomes-update"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 138339154,
+          "mode": "list",
+          "cachedResultName": "INCOMES",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=138339154"
+        },
+        "options": {}
+      },
+      "id": "407f0d48-3013-447d-a735-f6dbd765be01",
+      "name": "Read Incomes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst body = $('Webhook Update').first().json.body;\nconst targetId = Number(body.id);\n\n// Find row number (2-based because of header)\nlet rowNumber = null;\nfor (let i = 0; i < rows.length; i++) {\n  if (Number(rows[i].json.id) === targetId) {\n    rowNumber = i + 2; // +1 for 0-index, +1 for header\n    break;\n  }\n}\n\nif (!rowNumber) {\n  throw new Error(`Income with id ${targetId} not found`);\n}\n\nreturn [{\n  json: {\n    row_number: rowNumber,\n    id: targetId,\n    date: body.date || '',\n    amount: Number(body.amount) || 0,\n    description: body.description || '',\n    objectId: body.objectId ? Number(body.objectId) : '',\n    objectName: body.objectName || '',\n    createdBy: Number(body.createdBy) || 0,\n    createdByName: body.createdByName || '',\n    bankTransactionId: body.bankTransactionId ? Number(body.bankTransactionId) : ''\n  }\n}];"
+      },
+      "id": "66d110dc-bb73-47bb-b65d-99ee7282409e",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 138339154,
+          "mode": "list",
+          "cachedResultName": "INCOMES",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=138339154"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "date": "={{ $json.date }}",
+            "amount": "={{ $json.amount }}",
+            "description": "={{ $json.description }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "createdBy": "={{ $json.createdBy }}",
+            "createdByName": "={{ $json.createdByName }}",
+            "bankTransactionId": "={{ $json.bankTransactionId }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectId",
+              "displayName": "objectId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectName",
+              "displayName": "objectName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "createdBy",
+              "displayName": "createdBy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "createdByName",
+              "displayName": "createdByName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bankTransactionId",
+              "displayName": "bankTransactionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "5f2c81e1-7eff-4843-a5ff-a7406b842df3",
+      "name": "Update Income",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const income = $('Find Row').first().json;\ndelete income.row_number;\n\nreturn [{\n  json: {\n    success: true,\n    data: income\n  }\n}];"
+      },
+      "id": "aba93f61-132d-4f50-abdf-b4676ef11125",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "fa7629a2-c7ac-4647-9d47-390e6ad8d023",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1104,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Update": {
+      "main": [
+        [
+          {
+            "node": "Read Incomes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Incomes": {
+      "main": [
+        [
+          {
+            "node": "Find Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row": {
+      "main": [
+        [
+          {
+            "node": "Update Income",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Income": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2e727940-1d64-4604-ad5a-2277d34dca3c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "1af91neKrZN7RqSw",
+  "tags": []
+}

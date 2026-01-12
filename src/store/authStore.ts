@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../types';
 import { apiService } from '../services/api';
-import { Company, COMPANIES } from '../config/api';
+import { Company, COMPANIES, setApiPrefix } from '../config/api';
 
 interface AuthStore {
   user: User | null;
@@ -27,12 +27,14 @@ export const useAuthStore = create<AuthStore>()(
       error: null,
 
       setCompany: (company: Company) => {
-        // Always get fresh sheetId from COMPANIES config to ensure it's up-to-date
+        // Always get fresh company from COMPANIES config to ensure it's up-to-date
         const freshCompany = COMPANIES.find(c => c.id === company.id) || company;
         set({ company: freshCompany });
         // Update apiService with the fresh sheetId
         apiService.setSheetId(freshCompany.sheetId);
-        console.log(`Company set to: ${freshCompany.name}, sheetId: ${freshCompany.sheetId}`);
+        // Update API prefix for endpoints (barin-alp or hefest)
+        setApiPrefix(freshCompany.apiPrefix);
+        console.log(`Company set to: ${freshCompany.name}, apiPrefix: ${freshCompany.apiPrefix}, sheetId: ${freshCompany.sheetId}`);
       },
 
       login: async (username: string, pin: string) => {
@@ -95,24 +97,26 @@ export const useAuthStore = create<AuthStore>()(
   )
 );
 
-// Initialize sheetId from localStorage on app load
-// IMPORTANT: Always use sheetId from COMPANIES config, not from localStorage
-// This ensures updates to sheetId in api.ts take effect immediately
+// Initialize sheetId and apiPrefix from localStorage on app load
+// IMPORTANT: Always use values from COMPANIES config, not from localStorage
+// This ensures updates to config take effect immediately
 const initializeFromStorage = () => {
   try {
     const stored = localStorage.getItem('barin-alp-auth');
     if (stored) {
       const { state } = JSON.parse(stored);
       if (state?.company?.id) {
-        // Import COMPANIES to get the CURRENT sheetId (not the cached one in localStorage)
-        import('../config/api').then(({ COMPANIES }) => {
-          // Find the company from COMPANIES config to get updated sheetId
+        // Import COMPANIES and setApiPrefix to get the CURRENT config (not cached in localStorage)
+        import('../config/api').then(({ COMPANIES, setApiPrefix }) => {
+          // Find the company from COMPANIES config to get updated values
           const currentCompany = COMPANIES.find(c => c.id === state.company.id);
           if (currentCompany) {
+            // Set apiPrefix from COMPANIES config (always up-to-date)
+            setApiPrefix(currentCompany.apiPrefix);
             // Use sheetId from COMPANIES config (always up-to-date)
             import('../services/api').then(({ apiService }) => {
               apiService.setSheetId(currentCompany.sheetId);
-              console.log(`Initialized sheetId for ${currentCompany.name}: ${currentCompany.sheetId}`);
+              console.log(`Initialized for ${currentCompany.name}: apiPrefix=${currentCompany.apiPrefix}, sheetId=${currentCompany.sheetId}`);
             });
           }
         });

@@ -1,0 +1,262 @@
+﻿{
+  "name": "HEFEST: Delete Transaction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "hefest/transactions/delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "f0328482-8c3b-498a-a5b8-eb79675f07ee",
+      "name": "Webhook Delete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "hefest-transactions-delete"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst idToDelete = parseInt(body.id);\n\nif (!idToDelete) {\n  throw new Error('ID is required for deletion');\n}\n\nreturn [{ json: { idToDelete } }];"
+      },
+      "id": "20942a13-eb23-4dd8-bed9-22ab829ac7e3",
+      "name": "Get ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1526480435,
+          "mode": "list",
+          "cachedResultName": "Transactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1526480435"
+        },
+        "options": {}
+      },
+      "id": "f59f1417-cf4e-4387-85b7-c06b8749e7cc",
+      "name": "Read Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst idToDelete = $('Get ID').first().json.idToDelete;\n\n// Find row number (1-indexed, +2 for header and 0-index)\nlet rowToDelete = -1;\nfor (let i = 0; i < items.length; i++) {\n  if (parseInt(items[i].json.id) === idToDelete) {\n    rowToDelete = i + 2; // +1 for header, +1 for 1-indexing\n    break;\n  }\n}\n\nif (rowToDelete === -1) {\n  throw new Error('Transaction not found with ID: ' + idToDelete);\n}\n\nreturn [{ json: { rowToDelete, idToDelete } }];"
+      },
+      "id": "7353801d-7d94-46ba-bfd3-5e683747ab2d",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1526480435,
+          "mode": "list",
+          "cachedResultName": "Transactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1526480435"
+        },
+        "startIndex": "={{ $json.rowToDelete }}"
+      },
+      "id": "04956c37-f8d1-4663-a812-6f06c6c81d43",
+      "name": "Delete Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true,\n    message: 'Transaction deleted successfully'\n  }\n}];"
+      },
+      "id": "59380488-e1ed-4d61-9044-24cc113d5720",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ba5aba10-3808-443a-8119-cd7d48818342",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        0
+      ]
+    }
+  ],
+  "pinData": {
+    "Webhook Delete": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.simeontsvetanovn8nworkflows.site",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "content-length": "8",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "content-type": "application/json",
+            "origin": "https://georgi-piskov.github.io",
+            "priority": "u=1, i",
+            "referer": "https://georgi-piskov.github.io/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "193.68.133.158",
+            "x-forwarded-host": "n8n.simeontsvetanovn8nworkflows.site",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "c0d433b98e98",
+            "x-real-ip": "193.68.133.158"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "id": 2
+          },
+          "webhookUrl": "https://n8n.simeontsvetanovn8nworkflows.site/webhook/hefest/transactions/delete",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook Delete": {
+      "main": [
+        [
+          {
+            "node": "Get ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ID": {
+      "main": [
+        [
+          {
+            "node": "Read Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Transactions": {
+      "main": [
+        [
+          {
+            "node": "Find Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row": {
+      "main": [
+        [
+          {
+            "node": "Delete Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Row": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4cf44059-bb75-4ec8-b429-97a6b40e7ba8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "VTovnPvDQeP7Bca9",
+  "tags": []
+}

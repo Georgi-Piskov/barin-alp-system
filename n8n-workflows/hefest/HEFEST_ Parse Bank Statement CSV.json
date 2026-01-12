@@ -1,0 +1,111 @@
+﻿{
+  "name": "HEFEST: Parse Bank Statement CSV",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hefest/bank-statement",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "533e8a38-f17d-45de-91af-9081e0cec554",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        800
+      ],
+      "webhookId": "barin-alp-bank-statement"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the CSV content (text)\nconst body = $input.item.json.body;\nconst csvContent = body.csv;\n\nif (!csvContent) {\n  return [{ json: { success: false, error: 'No CSV content provided' } }];\n}\n\n// Return the CSV text for parsing\nreturn [{ json: { csvContent } }];"
+      },
+      "id": "f62f0f97-a94b-4f9d-ae8f-175e9f6962f6",
+      "name": "Prepare CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Asset Bank CSV format - group by operation type\n// Columns (separated by ;):\n// 0: РЎРјРµС‚РєР°/РљР°СЂС‚Р° (IBAN)\n// 1: Р”Р°С‚Р° (DD.MM.YYYY)\n// 2: Р”Р±/РљСЂ\n// 3: РЎСѓРјР°\n// 4: Р’Р°Р»СѓС‚Р°\n// 5-6: BIC/IBAN РЅР° РЅР°СЂРµРґРёС‚РµР»\n// 7-8: РўРёРї/РРјРµ РЅР° РЅР°СЂРµРґРёС‚РµР»\n// 9-10: BIC/IBAN РЅР° РїРѕР»СѓС‡Р°С‚РµР»\n// 11-12: РўРёРї/РРјРµ РЅР° РїРѕР»СѓС‡Р°С‚РµР»\n// 13: РўРёРї РѕРїРµСЂР°С†РёСЏ\n// 14-15: РћСЃРЅРѕРІР°РЅРёРµ 1/2\n// 17: Р РµС„РµСЂРµРЅС†РёСЏ\n\nconst csvContent = $input.item.json.csvContent;\nconst lines = csvContent.split('\\n');\n\nconst rawTransactions = [];\nconst processedRefs = new Set();\n\n// Skip header row, parse all transactions first\nfor (let i = 1; i < lines.length; i++) {\n  const line = lines[i].trim();\n  if (!line) continue;\n  \n  const cols = line.split(';');\n  if (cols.length < 14) continue;\n  \n  const iban = cols[0].trim();\n  const dateStr = cols[1].trim();\n  const typeRaw = cols[2].trim().toLowerCase();\n  const amountStr = cols[3].trim();\n  const currency = cols[4].trim();\n  const senderName = cols[8] ? cols[8].trim() : '';\n  const receiverName = cols[12] ? cols[12].trim() : '';\n  const operationType = cols[13] ? cols[13].trim() : '';\n  const purpose1 = cols[14] ? cols[14].trim() : '';\n  const purpose2 = cols[15] ? cols[15].trim() : '';\n  const reference = cols[17] ? cols[17].trim() : '';\n  \n  // Skip if not main IBAN\n  if (!iban.startsWith('BG')) continue;\n  \n  // Skip duplicates by reference\n  if (reference && processedRefs.has(reference)) continue;\n  if (reference) processedRefs.add(reference);\n  \n  // Parse date\n  const dateParts = dateStr.split('.');\n  const isoDate = dateParts.length === 3 \n    ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`\n    : dateStr;\n  \n  // Parse amount\n  const cleanAmount = amountStr.replace(/\\s/g, '').replace(',', '.');\n  const amount = parseFloat(cleanAmount) || 0;\n  \n  // Determine debit/credit\n  const isDebit = typeRaw.includes('РґРµР±РёС‚') || typeRaw.includes('debit');\n  const type = isDebit ? 'debit' : 'credit';\n  \n  rawTransactions.push({\n    rowIndex: i,\n    date: isoDate,\n    reference,\n    description: operationType || purpose1,\n    operationType: operationType.toLowerCase(),\n    type,\n    amount,\n    currency: currency || 'EUR',\n    iban,\n    senderName,\n    receiverName,\n    purpose: (purpose1 + ' ' + purpose2).trim(),\n    purpose1,\n    purpose2\n  });\n}\n\n// ========== Group by operation type ==========\nconst finalTransactions = [];\nlet interestTotal = 0;\nlet interestCount = 0;\nlet principalTotal = 0;\nlet principalCount = 0;\nlet feesTotal = 0;\nlet feesCount = 0;\nlet skippedCount = 0;\nlet firstInterestDate = null, lastInterestDate = null;\nlet firstPrincipalDate = null, lastPrincipalDate = null;\nlet firstFeeDate = null, lastFeeDate = null;\n\nrawTransactions.forEach(tx => {\n  const opType = tx.operationType.toLowerCase();\n  \n  // Skip: \"РЈСЃРІРѕСЏРІР°РЅРµ РЅР° РєСЂРµРґРёС‚\" and \"РР·РґСЉР»Р¶Р°РІР°РЅРµ РЅР° РєСЂРµРґРёС‚\"\n  if (opType.includes('СѓСЃРІРѕСЏРІР°РЅРµ РЅР° РєСЂРµРґРёС‚') || opType.includes('РёР·РґСЉР»Р¶Р°РІР°РЅРµ РЅР° РєСЂРµРґРёС‚')) {\n    skippedCount++;\n    return;\n  }\n  \n  // Group: \"Р‘Р°РЅРєРѕРІРѕ РІР·РµРјР°РЅРµ Р»РёС…РІР°\"\n  if (opType.includes('Р±Р°РЅРєРѕРІРѕ РІР·РµРјР°РЅРµ Р»РёС…РІР°')) {\n    interestTotal += tx.amount;\n    interestCount++;\n    if (!firstInterestDate || tx.date < firstInterestDate) firstInterestDate = tx.date;\n    if (!lastInterestDate || tx.date > lastInterestDate) lastInterestDate = tx.date;\n    return;\n  }\n  \n  // Group: \"Р‘Р°РЅРєРѕРІРѕ РІР·РµРјР°РЅРµ РіР»Р°РІРЅРёС†Р°\"\n  if (opType.includes('Р±Р°РЅРєРѕРІРѕ РІР·РµРјР°РЅРµ РіР»Р°РІРЅРёС†Р°')) {\n    principalTotal += tx.amount;\n    principalCount++;\n    if (!firstPrincipalDate || tx.date < firstPrincipalDate) firstPrincipalDate = tx.date;\n    if (!lastPrincipalDate || tx.date > lastPrincipalDate) lastPrincipalDate = tx.date;\n    return;\n  }\n  \n  // Group: \"РђРІС‚РѕРјР°С‚РёС‡РЅР° С‚Р°РєСЃР°\"\n  if (opType.includes('Р°РІС‚РѕРјР°С‚РёС‡РЅР° С‚Р°РєСЃР°')) {\n    feesTotal += tx.amount;\n    feesCount++;\n    if (!firstFeeDate || tx.date < firstFeeDate) firstFeeDate = tx.date;\n    if (!lastFeeDate || tx.date > lastFeeDate) lastFeeDate = tx.date;\n    return;\n  }\n  \n  // Keep separate: \"РљСЂРµРґРёС‚РµРЅ РїСЂРµРІРѕРґ\", \"РљР°СЂС‚РѕРІРё С‚СЂР°РЅР·Р°РєС†РёРё\", \"Р’СЉС‚СЂРµС€РЅРѕ Р±Р°РЅРєРѕРІ РїСЂРµРІРѕРґ\"\n  let displayName = tx.description || tx.purpose1;\n  let counterpartyName = tx.type === 'debit' ? tx.receiverName : tx.senderName;\n  \n  // Extract invoice reference if present\n  let invoiceRef = '';\n  const invoiceMatch = tx.purpose.match(/(?:С„Р°РєС‚СѓСЂР°|С„-СЂР°|invoice|inv)[\\s#:]*([\\d\\/]+)/i);\n  if (invoiceMatch) invoiceRef = invoiceMatch[1];\n  \n  finalTransactions.push({\n    date: tx.date,\n    reference: tx.reference,\n    description: tx.description,\n    displayName: counterpartyName || displayName,\n    operationType: tx.operationType,\n    type: tx.type,\n    amount: tx.amount,\n    currency: tx.currency,\n    iban: tx.iban,\n    counterpartyName,\n    invoiceRef,\n    purpose: tx.purpose,\n    objectId: null,\n    objectName: null,\n    technicianId: null,\n    technicianName: null,\n    status: 'unmatched'\n  });\n});\n\n// Add grouped interest if any\nif (interestTotal > 0) {\n  finalTransactions.push({\n    date: lastInterestDate || new Date().toISOString().split('T')[0],\n    reference: 'INTEREST-' + (lastInterestDate || '').replace(/-/g, ''),\n    description: `Р›РёС…РІРё (${interestCount} Р±СЂ.)`,\n    displayName: `Р›РёС…РІРё (${interestCount} Р±СЂ.)`,\n    operationType: 'Р‘Р°РЅРєРѕРІРѕ РІР·РµРјР°РЅРµ Р»РёС…РІР°',\n    type: 'debit',\n    amount: Math.round(interestTotal * 100) / 100,\n    currency: 'EUR',\n    iban: rawTransactions[0]?.iban || '',\n    counterpartyName: 'Р‘Р°РЅРєР°',\n    invoiceRef: '',\n    purpose: `РћР±РµРґРёРЅРµРЅРё Р»РёС…РІРё Р·Р° РїРµСЂРёРѕРґР° ${firstInterestDate} - ${lastInterestDate}`,\n    objectId: null,\n    objectName: null,\n    technicianId: null,\n    technicianName: null,\n    status: 'unmatched',\n    isGrouped: true\n  });\n}\n\n// Add grouped principal if any\nif (principalTotal > 0) {\n  finalTransactions.push({\n    date: lastPrincipalDate || new Date().toISOString().split('T')[0],\n    reference: 'PRINCIPAL-' + (lastPrincipalDate || '').replace(/-/g, ''),\n    description: `Р“Р»Р°РІРЅРёС†Рё РїРѕ РєСЂРµРґРёС‚Рё (${principalCount} Р±СЂ.)`,\n    displayName: `Р“Р»Р°РІРЅРёС†Рё РїРѕ РєСЂРµРґРёС‚Рё (${principalCount} Р±СЂ.)`,\n    operationType: 'Р‘Р°РЅРєРѕРІРѕ РІР·РµРјР°РЅРµ РіР»Р°РІРЅРёС†Р°',\n    type: 'debit',\n    amount: Math.round(principalTotal * 100) / 100,\n    currency: 'EUR',\n    iban: rawTransactions[0]?.iban || '',\n    counterpartyName: 'Р‘Р°РЅРєР°',\n    invoiceRef: '',\n    purpose: `РћР±РµРґРёРЅРµРЅРё РіР»Р°РІРЅРёС†Рё Р·Р° РїРµСЂРёРѕРґР° ${firstPrincipalDate} - ${lastPrincipalDate}`,\n    objectId: null,\n    objectName: null,\n    technicianId: null,\n    technicianName: null,\n    status: 'unmatched',\n    isGrouped: true\n  });\n}\n\n// Add grouped fees if any\nif (feesTotal > 0) {\n  finalTransactions.push({\n    date: lastFeeDate || new Date().toISOString().split('T')[0],\n    reference: 'FEES-' + (lastFeeDate || '').replace(/-/g, ''),\n    description: `Р‘Р°РЅРєРѕРІРё С‚Р°РєСЃРё (${feesCount} Р±СЂ.)`,\n    displayName: `Р‘Р°РЅРєРѕРІРё С‚Р°РєСЃРё (${feesCount} Р±СЂ.)`,\n    operationType: 'РђРІС‚РѕРјР°С‚РёС‡РЅР° С‚Р°РєСЃР°',\n    type: 'debit',\n    amount: Math.round(feesTotal * 100) / 100,\n    currency: 'EUR',\n    iban: rawTransactions[0]?.iban || '',\n    counterpartyName: 'Р‘Р°РЅРєР°',\n    invoiceRef: '',\n    purpose: `РћР±РµРґРёРЅРµРЅРё Р±Р°РЅРєРѕРІРё С‚Р°РєСЃРё Р·Р° РїРµСЂРёРѕРґР° ${firstFeeDate} - ${lastFeeDate}`,\n    objectId: null,\n    objectName: null,\n    technicianId: null,\n    technicianName: null,\n    status: 'unmatched',\n    isGrouped: true\n  });\n}\n\n// Sort by date descending\nfinalTransactions.sort((a, b) => b.date.localeCompare(a.date));\n\n// Calculate totals\nconst totalDebit = finalTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);\nconst totalCredit = finalTransactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);\nconst netChange = Math.round((totalCredit - totalDebit) * 100) / 100;\n\nreturn [{ \n  json: { \n    success: true, \n    data: {\n      transactions: finalTransactions,\n      count: finalTransactions.length,\n      totalDebit: Math.round(totalDebit * 100) / 100,\n      totalCredit: Math.round(totalCredit * 100) / 100,\n      groupedInterest: Math.round(interestTotal * 100) / 100,\n      groupedInterestCount: interestCount,\n      groupedPrincipal: Math.round(principalTotal * 100) / 100,\n      groupedPrincipalCount: principalCount,\n      groupedFees: Math.round(feesTotal * 100) / 100,\n      groupedFeesCount: feesCount,\n      skippedTransactions: skippedCount,\n      netChange\n    }\n  } \n}];"
+      },
+      "id": "9a296d5a-5910-4927-b5c5-788790d8c490",
+      "name": "Parse Bank Transactions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "4727d7f8-92de-425f-a7ef-6d45545c2851",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -224,
+        800
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare CSV": {
+      "main": [
+        [
+          {
+            "node": "Parse Bank Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Bank Transactions": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9fa13b32-4bbe-4120-8acb-d5553425be2d",
+  "meta": {
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "7vSpoQTxh0ZDr7h7",
+  "tags": []
+}

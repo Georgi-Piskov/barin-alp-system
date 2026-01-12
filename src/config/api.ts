@@ -7,6 +7,7 @@ export interface Company {
   name: string;
   shortName: string;
   sheetId: string;
+  apiPrefix: string; // API endpoint prefix
   color: string; // For UI distinction
 }
 
@@ -16,6 +17,7 @@ export const COMPANIES: Company[] = [
     name: 'БАРИН АЛП',
     shortName: 'БАРИН',
     sheetId: '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo',
+    apiPrefix: 'barin-alp',
     color: 'primary', // Blue theme
   },
   {
@@ -23,9 +25,79 @@ export const COMPANIES: Company[] = [
     name: 'ХЕФЕСТ ООД',
     shortName: 'ХЕФЕСТ',
     sheetId: '1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g',
+    apiPrefix: 'hefest',
     color: 'orange', // Orange theme to distinguish
   },
 ];
+
+// Default company (used when no company is selected)
+const DEFAULT_PREFIX = 'barin-alp';
+
+// Current API prefix - will be updated when company is selected
+let currentApiPrefix = DEFAULT_PREFIX;
+
+// Set the current API prefix based on selected company
+export const setApiPrefix = (prefix: string) => {
+  currentApiPrefix = prefix;
+  console.log('API prefix set to:', prefix);
+};
+
+// Get current API prefix
+export const getApiPrefix = () => currentApiPrefix;
+
+// Generate endpoints dynamically based on current company
+export const getEndpoints = () => ({
+  // Auth
+  LOGIN: `/${currentApiPrefix}/login`,
+  
+  // Users
+  GET_USERS: `/${currentApiPrefix}/users`,
+  
+  // Objects
+  GET_OBJECTS: `/${currentApiPrefix}/objects`,
+  CREATE_OBJECT: `/${currentApiPrefix}/objects/create`,
+  UPDATE_OBJECT: `/${currentApiPrefix}/objects/update`,
+  DELETE_OBJECT: `/${currentApiPrefix}/objects/delete`,
+  
+  // Invoices
+  GET_INVOICES: `/${currentApiPrefix}/invoices`,
+  CREATE_INVOICE: `/${currentApiPrefix}/invoices/create`,
+  UPDATE_INVOICE: `/${currentApiPrefix}/invoices/update`,
+  DELETE_INVOICE: `/${currentApiPrefix}/invoices/delete`,
+  
+  // Inventory
+  GET_INVENTORY: `/${currentApiPrefix}/inventory`,
+  CREATE_INVENTORY: `/${currentApiPrefix}/inventory/create`,
+  UPDATE_INVENTORY: `/${currentApiPrefix}/inventory/update`,
+  DELETE_INVENTORY: `/${currentApiPrefix}/inventory/delete`,
+  
+  // Photos
+  UPLOAD_PHOTO: `/${currentApiPrefix}/upload-photo`,
+  
+  // Transactions
+  GET_TRANSACTIONS: `/${currentApiPrefix}/transactions`,
+  CREATE_TRANSACTION: `/${currentApiPrefix}/transactions/create`,
+  UPDATE_TRANSACTION: `/${currentApiPrefix}/transactions/update`,
+  DELETE_TRANSACTION: `/${currentApiPrefix}/transactions/delete`,
+  
+  // Dashboard
+  GET_DASHBOARD: `/${currentApiPrefix}/dashboard`,
+  
+  // Bank Statements
+  PARSE_BANK_STATEMENT: `/${currentApiPrefix}/bank-statement`,
+  GET_BANK_TRANSACTIONS: `/${currentApiPrefix}/bank-transactions`,
+  SAVE_BANK_TRANSACTIONS: `/${currentApiPrefix}/bank-transactions/save`,
+  UPDATE_BANK_TRANSACTION: `/${currentApiPrefix}/bank-transactions/update`,
+  
+  // Incomes - Приходи
+  GET_INCOMES: `/${currentApiPrefix}/incomes`,
+  CREATE_INCOME: `/${currentApiPrefix}/incomes/create`,
+  UPDATE_INCOME: `/${currentApiPrefix}/incomes/update`,
+  DELETE_INCOME: `/${currentApiPrefix}/incomes/delete`,
+  
+  // Object Details
+  GET_OBJECT_DETAILS: `/${currentApiPrefix}/objects/:id/details`,
+});
 
 export const API_CONFIG = {
   // Base URL for your n8n instance
@@ -34,58 +106,9 @@ export const API_CONFIG = {
   // Default Google Sheets ID (BARIN ALP) - will be overridden by company selection
   SPREADSHEET_ID: '1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo',
   
-  // Endpoints (these will be n8n webhook paths)
-  ENDPOINTS: {
-    // Auth
-    LOGIN: '/barin-alp/login',
-    
-    // Users
-    GET_USERS: '/barin-alp/users',
-    
-    // Objects
-    GET_OBJECTS: '/barin-alp/objects',
-    CREATE_OBJECT: '/barin-alp/objects/create',
-    UPDATE_OBJECT: '/barin-alp/objects/update',
-    DELETE_OBJECT: '/barin-alp/objects/delete',
-    
-    // Invoices
-    GET_INVOICES: '/barin-alp/invoices',
-    CREATE_INVOICE: '/barin-alp/invoices/create',
-    UPDATE_INVOICE: '/barin-alp/invoices/update',
-    DELETE_INVOICE: '/barin-alp/invoices/delete',
-    
-    // Inventory
-    GET_INVENTORY: '/barin-alp/inventory',
-    CREATE_INVENTORY: '/barin-alp/inventory/create',
-    UPDATE_INVENTORY: '/barin-alp/inventory/update',
-    DELETE_INVENTORY: '/barin-alp/inventory/delete',
-    
-    // Photos
-    UPLOAD_PHOTO: '/barin-alp/upload-photo',
-    
-    // Transactions
-    GET_TRANSACTIONS: '/barin-alp/transactions',
-    CREATE_TRANSACTION: '/barin-alp/transactions/create',
-    UPDATE_TRANSACTION: '/barin-alp/transactions/update',
-    DELETE_TRANSACTION: '/barin-alp/transactions/delete',
-    
-    // Dashboard
-    GET_DASHBOARD: '/barin-alp/dashboard',
-    
-    // Bank Statements
-    PARSE_BANK_STATEMENT: '/barin-alp/bank-statement',
-    GET_BANK_TRANSACTIONS: '/barin-alp/bank-transactions',
-    SAVE_BANK_TRANSACTIONS: '/barin-alp/bank-transactions/save',
-    UPDATE_BANK_TRANSACTION: '/barin-alp/bank-transactions/update', // POST with id in body
-    
-    // Incomes - Приходи
-    GET_INCOMES: '/barin-alp/incomes',
-    CREATE_INCOME: '/barin-alp/incomes/create',
-    UPDATE_INCOME: '/barin-alp/incomes/update',
-    DELETE_INCOME: '/barin-alp/incomes/delete',
-    
-    // Object Details (combined endpoint to reduce API calls)
-    GET_OBJECT_DETAILS: '/barin-alp/objects/:id/details',
+  // Get current endpoints (dynamic based on selected company)
+  get ENDPOINTS() {
+    return getEndpoints();
   }
 };
 

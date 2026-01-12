@@ -1,0 +1,197 @@
+{
+  "name": "BARIN-ALP: Delete Income",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "barin-alp/incomes/delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "6ba21ab3-fc14-4018-9f3e-c6878efe3e64",
+      "name": "Webhook Delete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "barin-incomes-delete"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 138339154,
+          "mode": "list",
+          "cachedResultName": "INCOMES",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=138339154"
+        },
+        "options": {}
+      },
+      "id": "9487864f-b625-4d63-86f8-54ee0fcd3897",
+      "name": "Read Incomes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst body = $('Webhook Delete').first().json.body;\nconst targetId = Number(body.id);\n\n// Find row number (2-based because of header)\nlet rowNumber = null;\nfor (let i = 0; i < rows.length; i++) {\n  if (Number(rows[i].json.id) === targetId) {\n    rowNumber = i + 2; // +1 for 0-index, +1 for header\n    break;\n  }\n}\n\nif (!rowNumber) {\n  throw new Error(`Income with id ${targetId} not found`);\n}\n\nreturn [{\n  json: {\n    row_number: rowNumber,\n    id: targetId\n  }\n}];"
+      },
+      "id": "fa34a5e6-528d-4d05-a66c-dafaab421726",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 138339154,
+          "mode": "list",
+          "cachedResultName": "INCOMES",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=138339154"
+        },
+        "startIndex": "={{ $json.rowToDelete }}"
+      },
+      "id": "ce4ed7e2-9aaa-41ab-9243-756e3582af88",
+      "name": "Delete Income",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true,\n    message: 'Income deleted successfully'\n  }\n}];"
+      },
+      "id": "0083e8ea-1cb0-4331-a225-489b1da16433",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "fb73bfec-aa0a-4244-bd3c-e9a448fc7f06",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1104,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Delete": {
+      "main": [
+        [
+          {
+            "node": "Read Incomes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Incomes": {
+      "main": [
+        [
+          {
+            "node": "Find Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row": {
+      "main": [
+        [
+          {
+            "node": "Delete Income",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Income": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e3d3d1a1-4d87-43cf-9cad-ac63458398b2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "2nlqVru4RqH6bTj7",
+  "tags": []
+}

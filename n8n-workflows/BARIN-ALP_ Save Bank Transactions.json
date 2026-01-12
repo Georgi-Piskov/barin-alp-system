@@ -1,0 +1,429 @@
+{
+  "name": "BARIN-ALP: Save Bank Transactions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/bank-transactions/save",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "3b7722a2-226a-43e7-b131-69a014ef700d",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2144,
+        464
+      ],
+      "webhookId": "barin-alp-bank-transactions-save"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1018740023"
+        },
+        "options": {}
+      },
+      "id": "4ef5f12c-577f-4869-b4ce-61cc3172d5dd",
+      "name": "Get Existing Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1952,
+        464
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get existing transactions and new transactions from request\nconst existingItems = $input.all();\nconst body = $('Webhook').first().json.body;\nconst newTransactions = body.transactions || [];\n\nif (!newTransactions.length) {\n  return [{ json: { success: true, insertedCount: 0, duplicateCount: 0, message: 'No transactions provided' } }];\n}\n\n// Create set of existing references for quick lookup\nconst existingRefs = new Set();\nlet maxId = 0;\n\nexistingItems.forEach(item => {\n  if (item.json.reference) {\n    existingRefs.add(String(item.json.reference));\n  }\n  const id = parseInt(item.json.id) || 0;\n  if (id > maxId) maxId = id;\n});\n\n// Filter out duplicates and assign IDs\nconst toInsert = [];\nlet duplicateCount = 0;\nconst importDate = new Date().toISOString().split('T')[0];\n\nnewTransactions.forEach(tx => {\n  const ref = String(tx.reference || '');\n  \n  if (ref && existingRefs.has(ref)) {\n    duplicateCount++;\n  } else {\n    maxId++;\n    toInsert.push({\n      id: maxId,\n      reference: tx.reference || '',\n      date: tx.date || '',\n      type: tx.type || 'debit',\n      amount: tx.amount || 0,\n      currency: tx.currency || 'BGN',\n      category: tx.category || 'other',\n      description: tx.description || '',\n      displayName: tx.displayName || '',\n      counterpartyName: tx.counterpartyName || '',\n      invoiceRef: tx.invoiceRef || '',\n      purpose: tx.purpose || '',\n      objectId: tx.objectId || '',\n      objectName: tx.objectName || '',\n      isCompanyExpense: tx.isCompanyExpense ? 'TRUE' : 'FALSE',\n      status: tx.status || 'unmatched',\n      importDate: importDate\n    });\n    // Add to set to prevent duplicates within same batch\n    if (ref) existingRefs.add(ref);\n  }\n});\n\n// Store counts for response\nconst insertCount = toInsert.length;\n\nif (toInsert.length === 0) {\n  return [{ json: { \n    success: true, \n    skip: true,\n    insertedCount: 0, \n    duplicateCount: duplicateCount,\n    message: `Всички ${duplicateCount} транзакции вече съществуват.`\n  } }];\n}\n\n// Return transactions with metadata\nreturn toInsert.map((tx, idx) => ({ \n  json: {\n    ...tx,\n    _meta: { insertCount, duplicateCount, isLast: idx === toInsert.length - 1 }\n  }\n}));"
+      },
+      "id": "81323710-c401-4290-a583-6fa108e6dd2e",
+      "name": "Filter Duplicates & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1744,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "69176a10-26e7-4acb-8ea5-973ac8ded711",
+      "name": "Has New Transactions?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1018740023"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "reference": "={{ $json.reference }}",
+            "date": "={{ $json.date }}",
+            "type": "={{ $json.type }}",
+            "amount": "={{ $json.amount }}",
+            "currency": "={{ $json.currency }}",
+            "category": "={{ $json.category }}",
+            "description": "={{ $json.description }}",
+            "displayName": "={{ $json.displayName }}",
+            "counterpartyName": "={{ $json.counterpartyName }}",
+            "invoiceRef": "={{ $json.invoiceRef }}",
+            "purpose": "={{ $json.purpose }}",
+            "objectId": "={{ $json.objectId }}",
+            "objectName": "={{ $json.objectName }}",
+            "isCompanyExpense": "={{ $json.isCompanyExpense }}",
+            "status": "={{ $json.status }}",
+            "importDate": "={{ $json.importDate }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reference",
+              "displayName": "reference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "displayName",
+              "displayName": "displayName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "counterpartyName",
+              "displayName": "counterpartyName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoiceRef",
+              "displayName": "invoiceRef",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "purpose",
+              "displayName": "purpose",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectId",
+              "displayName": "objectId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "objectName",
+              "displayName": "objectName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "isCompanyExpense",
+              "displayName": "isCompanyExpense",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "importDate",
+              "displayName": "importDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "98165b29-ab5a-4909-aa8d-3e934d84b65d",
+      "name": "Append to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1344,
+        352
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the last item which has the counts\nconst items = $input.all();\nconst lastItem = items[items.length - 1];\nconst meta = lastItem.json._meta || { insertCount: items.length, duplicateCount: 0 };\n\nreturn [{\n  json: {\n    success: true,\n    message: `Записани ${meta.insertCount} транзакции. Пропуснати ${meta.duplicateCount} дубликати.`,\n    insertedCount: meta.insertCount,\n    duplicateCount: meta.duplicateCount\n  }\n}];"
+      },
+      "id": "2cd14098-550f-4e2d-a94a-07c7de1becf4",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "fbd84063-a29b-49cc-8af4-c774242028fc",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -944,
+        464
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Existing Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Transactions": {
+      "main": [
+        [
+          {
+            "node": "Filter Duplicates & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Duplicates & Prepare": {
+      "main": [
+        [
+          {
+            "node": "Has New Transactions?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has New Transactions?": {
+      "main": [
+        [
+          {
+            "node": "Append to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7ea5c8f9-fa4e-4cf1-b433-103d0e5bedca",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "FbysDW1BVbyvtHu5",
+  "tags": []
+}
