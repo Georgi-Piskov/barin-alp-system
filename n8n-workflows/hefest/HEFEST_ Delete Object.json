@@ -22,11 +22,12 @@
     },
     {
       "parameters": {
-        "operation": "delete",
         "documentId": {
           "__rl": true,
           "value": "HEFEST_DB",
-          "mode": "list"
+          "mode": "list",
+          "cachedResultName": "HEFEST_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
@@ -34,14 +35,63 @@
           "mode": "list",
           "cachedResultName": "OBJECTS",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1423865567"
+        },
+        "options": {}
+      },
+      "id": "read-objects-node",
+      "name": "Read Objects",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        220,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
         }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst body = $('Webhook Delete').first().json.body;\nconst idToDelete = Number(body.id);\n\n// Find row number (1-indexed, +2 for header and 0-index)\nlet rowToDelete = -1;\nitems.forEach((item, index) => {\n  if (Number(item.json.ID) === idToDelete) {\n    rowToDelete = index + 2; // +1 for header, +1 for 1-indexed\n  }\n});\n\nif (rowToDelete === -1) {\n  throw new Error('Item not found');\n}\n\nreturn [{ json: { rowNumber: rowToDelete, id: idToDelete } }];"
+      },
+      "id": "find-row-node",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "HEFEST_DB",
+          "mode": "list",
+          "cachedResultName": "HEFEST_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1423865567,
+          "mode": "list",
+          "cachedResultName": "OBJECTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1423865567"
+        },
+        "startIndex": "={{ $json.rowNumber }}",
+        "options": {}
       },
       "id": "da08c611-bc78-404c-b6ef-dde7423e9260",
       "name": "Delete from Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.4,
       "position": [
-        224,
+        660,
         0
       ],
       "credentials": {
@@ -60,7 +110,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        880,
         0
       ]
     },
@@ -73,7 +123,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        672,
+        1100,
         0
       ]
     }
@@ -81,6 +131,28 @@
   "pinData": {},
   "connections": {
     "Webhook Delete": {
+      "main": [
+        [
+          {
+            "node": "Read Objects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Objects": {
+      "main": [
+        [
+          {
+            "node": "Find Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row": {
       "main": [
         [
           {
