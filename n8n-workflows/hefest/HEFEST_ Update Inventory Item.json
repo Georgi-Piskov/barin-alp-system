@@ -39,7 +39,7 @@
         "documentId": {
           "__rl": true,
           "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
-          "mode": "id"
+          "mode": "list"
         },
         "sheetName": {
           "__rl": true,
@@ -266,3 +266,4 @@
   "id": "rGR2oGeSYQsN57Mb",
   "tags": []
 }
+
