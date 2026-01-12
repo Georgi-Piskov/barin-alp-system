@@ -9,7 +9,7 @@ export const LoginPage = () => {
   const [pin, setPin] = useState('');
   const navigate = useNavigate();
   
-  const { login, isLoading, error, clearError, company, setCompany } = useAuthStore();
+  const { login, isLoading, error, clearError, company, setCompany, clearCompany } = useAuthStore();
 
   // If already logged in, redirect to dashboard
   useEffect(() => {
@@ -43,7 +43,7 @@ export const LoginPage = () => {
   };
 
   const handleBackToCompanies = () => {
-    setCompany(null as unknown as Company);
+    clearCompany();
     clearError();
   };
 

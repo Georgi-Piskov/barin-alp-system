@@ -35,6 +35,7 @@ interface AuthStore {
   error: string | null;
   
   setCompany: (company: Company) => void;
+  clearCompany: () => void;
   login: (username: string, pin: string) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
@@ -58,6 +59,10 @@ export const useAuthStore = create<AuthStore>()(
         // Update API prefix for endpoints (barin-alp or hefest)
         setApiPrefix(freshCompany.apiPrefix);
         console.log(`Company set to: ${freshCompany.name}, apiPrefix: ${freshCompany.apiPrefix}, sheetId: ${freshCompany.sheetId}`);
+      },
+
+      clearCompany: () => {
+        set({ company: null, user: null, isAuthenticated: false });
       },
 
       login: async (username: string, pin: string) => {
