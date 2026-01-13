@@ -1,7 +1,98 @@
 # BARIN ALP System - Състояние на проекта
-**Последна актуализация:** 12 януари 2026
+**Последна актуализация:** 13 януари 2026
 
-## Последни промени (12 януари 2026)
+## 🎉 МУЛТИ-КОМПАНИЯ ПОДДРЪЖКА - ЗАВЪРШЕНА!
+
+### Какво беше направено (12-13 януари 2026)
+
+#### ✅ Добавена поддръжка за втора компания - ХЕФЕСТ ООД
+
+**Структура:**
+- **БАРИН АЛП** - Синя тема, sheetId: `1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo`, endpoint prefix: `/barin-alp/`
+- **ХЕФЕСТ ООД** - Оранжева тема, sheetId: `1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g`, endpoint prefix: `/hefest/`
+
+#### ✅ 29 HEFEST n8n workflows създадени
+
+Всички workflows са в папка `n8n-workflows/hefest/`:
+- HEFEST_ Login.json
+- HEFEST_ Get Users.json
+- HEFEST_ Get Objects.json
+- HEFEST_ Create Object.json
+- HEFEST_ Update Object.json
+- HEFEST_ Delete Object.json (с Find Row Code node за правилно изтриване)
+- HEFEST_ Get Invoices.json
+- HEFEST_ Create Invoice.json
+- HEFEST_ Update Invoice.json
+- HEFEST_ Delete Invoice.json
+- HEFEST_ Get Inventory.json
+- HEFEST_ Create Inventory Item.json
+- HEFEST_ Update Inventory Item.json
+- HEFEST_ Delete Inventory Item.json
+- HEFEST_ Get Transactions.json
+- HEFEST_ Create Transaction.json
+- HEFEST_ Update Transaction.json
+- HEFEST_ Delete Transaction.json
+- HEFEST_ Get Dashboard Stats.json
+- HEFEST_ Get Incomes.json
+- HEFEST_ Create Income.json
+- HEFEST_ Update Income.json
+- HEFEST_ Delete Income.json
+- HEFEST_ Get Bank Transactions.json
+- HEFEST_ Save Bank Transactions.json
+- HEFEST_ Update Bank Transaction.json
+- HEFEST_ Parse Bank Statement CSV.json
+- HEFEST_ Get Object Details.json
+- HEFEST_ Upload Photo to Drive.json
+
+**Важно за workflows:**
+- Document mode: "From list" с "HEFEST_DB" (не By ID)
+- Всички endpoints са с prefix `/hefest/` (не `/barin-alp/`)
+- webhookId-та са уникални (hefest-login, hefest-objects, etc.)
+
+#### ✅ Frontend промени
+
+**Файлове променени:**
+
+1. **src/config/api.ts**
+   - Добавен `apiPrefix` в Company interface
+   - Динамични endpoints чрез `getEndpoints()` функция
+   - `setApiPrefix()` за смяна на endpoint prefix
+   - API_CONFIG.ENDPOINTS e getter, който връща динамични endpoints
+
+2. **src/store/authStore.ts**
+   - Добавена `clearCompany()` функция за бутона "Друга фирма"
+   - **СИНХРОННА** инициализация на apiPrefix при зареждане (без race condition)
+   - `setCompany()` извиква `setApiPrefix()` за правилни endpoints
+
+3. **src/pages/Login/LoginPage.tsx**
+   - Използва `clearCompany()` за бутона "< Друга фирма"
+
+#### 📋 ДЕЙСТВИЯ ЗА ПОТРЕБИТЕЛЯ
+
+##### 🔴 ТРЯБВА ДА СЕ НАПРАВЯТ:
+
+1. **Импортирай 29 HEFEST workflows в n8n**
+   - Файловете са в `n8n-workflows/hefest/`
+   - Импортирай всеки JSON файл
+   - Активирай всички workflows
+
+2. **Сподели HEFEST Google Sheet**
+   - Отвори: https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g
+   - Share → Добави имейла от n8n credentials (GP Google Sheets account 3)
+   - Дай Editor достъп
+
+3. **Добави потребители в HEFEST_DB**
+   - В sheet "Users" добави редове с id, username, name, role, pin
+   - Пример: 1, GP, Георги Писков, director, 1234
+
+4. **Тествай**
+   - Избери ХЕФЕСТ от началния екран
+   - Влез с потребител от HEFEST_DB
+   - Провери дали виждаш празни данни (не данни от БАРИН)
+
+---
+
+## Предишни промени (12 януари 2026)
 
 ### ✅ Техниците виждат само СВОИТЕ разходи и приходи по обекти
 
