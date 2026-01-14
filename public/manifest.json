@@ -1,0 +1,27 @@
+{
+  "name": "БАРИН АЛП - Строителна Система",
+  "short_name": "БАРИН АЛП",
+  "description": "Система за управление на финанси и инвентар в строителна фирма",
+  "start_url": "/barin-alp-system/",
+  "scope": "/barin-alp-system/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "productivity"],
+  "lang": "bg"
+}

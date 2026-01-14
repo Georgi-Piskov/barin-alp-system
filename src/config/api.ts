@@ -88,6 +88,7 @@ export const getEndpoints = () => ({
   GET_BANK_TRANSACTIONS: `/${currentApiPrefix}/bank-transactions`,
   SAVE_BANK_TRANSACTIONS: `/${currentApiPrefix}/bank-transactions/save`,
   UPDATE_BANK_TRANSACTION: `/${currentApiPrefix}/bank-transactions/update`,
+  DELETE_BANK_TRANSACTION: `/${currentApiPrefix}/bank-transactions/delete`,
   
   // Incomes - Приходи
   GET_INCOMES: `/${currentApiPrefix}/incomes`,

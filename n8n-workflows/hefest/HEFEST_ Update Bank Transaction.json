@@ -43,8 +43,10 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": "BankTransactions",
-          "mode": "list"
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1018740023"
         },
         "columns": {
           "mappingMode": "defineBelow",

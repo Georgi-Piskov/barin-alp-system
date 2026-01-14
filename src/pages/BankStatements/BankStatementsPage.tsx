@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { BankTransaction, Invoice, ConstructionObject, Income, User } from '../../types';
+import { BankTransaction, ConstructionObject, Income, User, Transaction } from '../../types';
 import { 
   FileUp,
   FileText,
@@ -17,7 +17,10 @@ import {
   Landmark,
   PlusCircle,
   Edit3,
-  Save
+  Save,
+  Trash2,
+  UserPlus,
+  MinusCircle
 } from 'lucide-react';
 import { IncomeModal } from '../Incomes/IncomeModal';
 
@@ -28,7 +31,6 @@ export const BankStatementsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
-  const [_invoices, setInvoices] = useState<Invoice[]>([]);
   const [objects, setObjects] = useState<ConstructionObject[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState({
@@ -36,13 +38,6 @@ export const BankStatementsPage = () => {
     totalDebit: 0,
     totalCredit: 0,
     netChange: 0,
-    groupedInterest: 0,
-    groupedInterestCount: 0,
-    groupedPrincipal: 0,
-    groupedPrincipalCount: 0,
-    groupedFees: 0,
-    groupedFeesCount: 0,
-    skippedTransactions: 0,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editingTxId, setEditingTxId] = useState<number | null>(null);
@@ -89,50 +84,19 @@ export const BankStatementsPage = () => {
         console.log('Bank transactions response:', response);
         
         if (response.success && response.data) {
-          // Handle both array and object response formats
           let txData: BankTransaction[] = [];
-          let statsData = {
-            count: 0,
-            totalDebit: 0,
-            totalCredit: 0,
-            netChange: 0,
-            groupedInterest: 0,
-            groupedInterestCount: 0,
-            groupedPrincipal: 0,
-            groupedPrincipalCount: 0,
-            groupedFees: 0,
-            groupedFeesCount: 0,
-            skippedTransactions: 0,
-          };
           
           if (Array.isArray(response.data)) {
-            // If response.data is an array directly
             txData = response.data;
-            statsData.count = txData.length;
           } else if (response.data.transactions) {
-            // If response.data has transactions property
             txData = Array.isArray(response.data.transactions) ? response.data.transactions : [];
-            statsData = {
-              count: response.data.count || txData.length || 0,
-              totalDebit: response.data.totalDebit || 0,
-              totalCredit: response.data.totalCredit || 0,
-              netChange: response.data.netChange || 0,
-              groupedInterest: response.data.groupedInterest || 0,
-              groupedInterestCount: response.data.groupedInterestCount || 0,
-              groupedPrincipal: response.data.groupedPrincipal || 0,
-              groupedPrincipalCount: response.data.groupedPrincipalCount || 0,
-              groupedFees: response.data.groupedFees || 0,
-              groupedFeesCount: response.data.groupedFeesCount || 0,
-              skippedTransactions: response.data.skippedTransactions || 0,
-            };
           }
           
           setTransactions(txData);
-          setStats(statsData);
+          calculateStats(txData);
         }
       } catch (err) {
         console.error('Error loading bank transactions:', err);
-        // Don't set error on initial load - just log it
       } finally {
         setIsInitialLoading(false);
       }
@@ -140,12 +104,15 @@ export const BankStatementsPage = () => {
     loadSavedTransactions();
   }, []);
 
-  // Load invoices for matching
-  const loadInvoices = async () => {
-    const response = await apiService.getInvoices();
-    if (response.success && response.data) {
-      setInvoices(response.data);
-    }
+  const calculateStats = (txList: BankTransaction[]) => {
+    const totalDebit = txList.filter(tx => tx.type === 'debit').reduce((sum, tx) => sum + tx.amount, 0);
+    const totalCredit = txList.filter(tx => tx.type === 'credit').reduce((sum, tx) => sum + tx.amount, 0);
+    setStats({
+      count: txList.length,
+      totalDebit,
+      totalCredit,
+      netChange: totalCredit - totalDebit,
+    });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,29 +141,12 @@ export const BankStatementsPage = () => {
         reader.readAsText(selectedFile, 'windows-1251');
       });
 
-      await loadInvoices();
-
       const response = await apiService.parseBankStatement(csvText);
       
       console.log('Bank statement response:', response);
       
       if (response.success && response.data) {
         const txData = response.data.transactions || [];
-        
-        // Show parsing info
-        const parseInfo: string[] = [];
-        if (response.data.skippedTransactions && response.data.skippedTransactions > 0) {
-          parseInfo.push(`${response.data.skippedTransactions} вътрешнобанкови операции пропуснати`);
-        }
-        if (response.data.groupedInterestCount && response.data.groupedInterestCount > 0) {
-          parseInfo.push(`${response.data.groupedInterestCount} лихви обединени (${response.data.groupedInterest}€)`);
-        }
-        if (response.data.groupedPrincipalCount && response.data.groupedPrincipalCount > 0) {
-          parseInfo.push(`${response.data.groupedPrincipalCount} главници обединени (${response.data.groupedPrincipal}€)`);
-        }
-        if (response.data.groupedFeesCount && response.data.groupedFeesCount > 0) {
-          parseInfo.push(`${response.data.groupedFeesCount} такси обединени (${response.data.groupedFees}€)`);
-        }
         
         // Save transactions to Google Sheets
         if (txData.length > 0) {
@@ -211,9 +161,6 @@ export const BankStatementsPage = () => {
             if (duplicateCount > 0) {
               msg += ` ${duplicateCount} дубликати пропуснати.`;
             }
-            if (parseInfo.length > 0) {
-              msg += ' ' + parseInfo.join('. ') + '.';
-            }
             setSuccessMessage(msg || 'Обработката завърши.');
           }
         }
@@ -221,21 +168,11 @@ export const BankStatementsPage = () => {
         // Reload from database to get IDs
         const reloadResponse = await apiService.getBankTransactions();
         if (reloadResponse.success && reloadResponse.data) {
-          const reloadedData = reloadResponse.data.transactions || [];
+          const reloadedData = Array.isArray(reloadResponse.data) 
+            ? reloadResponse.data 
+            : (reloadResponse.data.transactions || []);
           setTransactions(reloadedData);
-          setStats({
-            count: reloadResponse.data.count || reloadedData.length || 0,
-            totalDebit: reloadResponse.data.totalDebit || 0,
-            totalCredit: reloadResponse.data.totalCredit || 0,
-            netChange: reloadResponse.data.netChange || 0,
-            groupedInterest: reloadResponse.data.groupedInterest || 0,
-            groupedInterestCount: reloadResponse.data.groupedInterestCount || 0,
-            groupedPrincipal: reloadResponse.data.groupedPrincipal || 0,
-            groupedPrincipalCount: reloadResponse.data.groupedPrincipalCount || 0,
-            groupedFees: reloadResponse.data.groupedFees || 0,
-            groupedFeesCount: reloadResponse.data.groupedFeesCount || 0,
-            skippedTransactions: reloadResponse.data.skippedTransactions || 0,
-          });
+          calculateStats(reloadedData);
         }
       } else {
         setError(response.error || 'Грешка при парсване на файла');
@@ -252,11 +189,9 @@ export const BankStatementsPage = () => {
     const tx = filteredTransactions[txIndex];
     const obj = objects.find(o => o.id === objectId);
     
-    // Find actual index in full transactions array
     const actualIndex = transactions.findIndex(t => t.id === tx.id);
     if (actualIndex === -1) return;
     
-    // Save to database if transaction has ID
     if (tx.id) {
       try {
         const response = await apiService.updateBankTransaction(tx.id, {
@@ -266,7 +201,6 @@ export const BankStatementsPage = () => {
         });
         
         if (response.success) {
-          // Update locally only on success
           const updatedTransactions = [...transactions];
           updatedTransactions[actualIndex] = {
             ...updatedTransactions[actualIndex],
@@ -340,37 +274,105 @@ export const BankStatementsPage = () => {
     setIsIncomeModalOpen(true);
   };
 
-  // Assign credit transaction to technician as income
-  const handleAssignToTechnician = async (txIndex: number, technicianId: number | null) => {
+  // Create expense (transaction) from bank transaction (debit)
+  const handleCreateExpenseFromTx = async (tx: BankTransaction) => {
+    // Create a transaction (expense) linked to this bank transaction
+    if (!tx.objectId) {
+      setError('Моля, първо изберете обект за тази транзакция');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    try {
+      const transactionData: Partial<Transaction> = {
+        type: 'expense',
+        userId: user?.id || 0,
+        userName: user?.name || '',
+        amount: tx.amount,
+        date: tx.date,
+        description: tx.displayName || tx.description || 'Банков разход',
+        createdBy: user?.id || 0,
+        createdByName: user?.name || '',
+        objectId: tx.objectId,
+        objectName: tx.objectName || '',
+        method: 'bank',
+      };
+
+      const response = await apiService.createTransaction(transactionData as any);
+      
+      if (response.success) {
+        setSuccessMessage('Разходът е записан успешно!');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.error || 'Грешка при създаване на разход');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('Error creating expense:', err);
+      setError('Грешка при създаване на разход');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  // Assign transaction to user (technician or director) as income
+  const handleAssignToUser = async (txIndex: number, userId: number | null) => {
     const tx = filteredTransactions[txIndex];
     const actualIndex = transactions.findIndex(t => t.id === tx.id);
     if (actualIndex === -1 || !tx.id) return;
 
     try {
-      const technician = technicianId ? users.find(u => u.id === technicianId) : null;
+      const selectedUser = userId ? users.find(u => u.id === userId) : null;
       
       const response = await apiService.updateBankTransaction(tx.id, {
-        technicianId: technicianId,
-        technicianName: technician?.name || null,
+        technicianId: userId,
+        technicianName: selectedUser?.name || null,
       });
       
       if (response.success) {
         const updatedTransactions = [...transactions];
         updatedTransactions[actualIndex] = {
           ...updatedTransactions[actualIndex],
-          technicianId: technicianId,
-          technicianName: technician?.name || null,
+          technicianId: userId,
+          technicianName: selectedUser?.name || null,
         };
         setTransactions(updatedTransactions);
-        setSuccessMessage(`Преводът е ${technicianId ? 'заприходен на ' + technician?.name : 'премахнат от техник'}`);
+        setSuccessMessage(`Преводът е ${userId ? 'заприходен на ' + selectedUser?.name : 'премахнат от потребител'}`);
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
         setError(response.error || 'Грешка при присвояване');
         setTimeout(() => setError(null), 5000);
       }
     } catch (err) {
-      console.error('Error assigning to technician:', err);
-      setError('Грешка при присвояване на техник');
+      console.error('Error assigning to user:', err);
+      setError('Грешка при присвояване');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  // Delete bank transaction
+  const handleDeleteTransaction = async (tx: BankTransaction) => {
+    if (!tx.id) return;
+    
+    if (!window.confirm(`Сигурни ли сте, че искате да изтриете транзакция "${tx.displayName || tx.description}" за ${tx.amount.toFixed(2)} €?`)) {
+      return;
+    }
+
+    try {
+      const response = await apiService.deleteBankTransaction(tx.id);
+      
+      if (response.success) {
+        const updatedTransactions = transactions.filter(t => t.id !== tx.id);
+        setTransactions(updatedTransactions);
+        calculateStats(updatedTransactions);
+        setSuccessMessage('Транзакцията е изтрита');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.error || 'Грешка при изтриване');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('Error deleting transaction:', err);
+      setError('Грешка при изтриване на транзакция');
       setTimeout(() => setError(null), 5000);
     }
   };
@@ -384,8 +386,6 @@ export const BankStatementsPage = () => {
   };
 
   const clearData = () => {
-    setTransactions([]);
-    setStats({ count: 0, totalDebit: 0, totalCredit: 0, netChange: 0, groupedInterest: 0, groupedInterestCount: 0, groupedPrincipal: 0, groupedPrincipalCount: 0, groupedFees: 0, groupedFeesCount: 0, skippedTransactions: 0 });
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -401,7 +401,7 @@ export const BankStatementsPage = () => {
   });
 
   // Count unassigned
-  const unassignedCount = transactions.filter(tx => !tx.objectId).length;
+  const unassignedCount = transactions.filter(tx => !tx.objectId && !tx.technicianId).length;
 
   if (!isDirector) {
     return (
@@ -431,7 +431,7 @@ export const BankStatementsPage = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Банкови извлечения</h1>
-        <p className="text-gray-500">Качете CSV от Asset Bank и разпределете транзакциите по обекти</p>
+        <p className="text-gray-500">Качете CSV от Asset Bank и разпределете транзакциите</p>
       </div>
 
       {/* Upload Section */}
@@ -509,7 +509,7 @@ export const BankStatementsPage = () => {
               ) : (
                 <>
                   <Search className="w-5 h-5" />
-                  Анализирай
+                  Качи и анализирай
                 </>
               )}
             </button>
@@ -543,7 +543,7 @@ export const BankStatementsPage = () => {
                   <p className="text-lg font-bold text-red-600">
                     -{stats.totalDebit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                   </p>
-                  <p className="text-sm text-gray-500">Разходи</p>
+                  <p className="text-sm text-gray-500">Дебит</p>
                 </div>
               </div>
             </div>
@@ -557,7 +557,7 @@ export const BankStatementsPage = () => {
                   <p className="text-lg font-bold text-green-600">
                     +{stats.totalCredit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                   </p>
-                  <p className="text-sm text-gray-500">Приходи</p>
+                  <p className="text-sm text-gray-500">Кредит</p>
                 </div>
               </div>
             </div>
@@ -575,7 +575,7 @@ export const BankStatementsPage = () => {
                   <p className={`text-xl font-bold ${unassignedCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
                     {unassignedCount}
                   </p>
-                  <p className="text-sm text-gray-500">Без обект</p>
+                  <p className="text-sm text-gray-500">Неразпределени</p>
                 </div>
               </div>
             </div>
@@ -605,7 +605,7 @@ export const BankStatementsPage = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Разходи
+                  Дебит (разходи)
                 </button>
                 <button
                   onClick={() => setFilterType('credit')}
@@ -615,7 +615,7 @@ export const BankStatementsPage = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Приходи
+                  Кредит (приходи)
                 </button>
               </div>
 
@@ -626,7 +626,7 @@ export const BankStatementsPage = () => {
                   onChange={(e) => setFilterUnassigned(e.target.checked)}
                   className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
                 />
-                <span className="text-sm text-gray-600">Само без обект</span>
+                <span className="text-sm text-gray-600">Само неразпределени</span>
               </label>
 
               <span className="text-sm text-gray-400 ml-auto">
@@ -639,7 +639,7 @@ export const BankStatementsPage = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="divide-y divide-gray-100">
               {filteredTransactions.map((tx, index) => (
-                <div key={tx.id || index} className={`p-4 ${!tx.objectId ? 'bg-red-50/30' : ''}`}>
+                <div key={tx.id || index} className={`p-4 ${!tx.objectId && !tx.technicianId ? 'bg-red-50/30' : ''}`}>
                   <div className="flex items-start gap-4">
                     {/* Icon */}
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -699,7 +699,10 @@ export const BankStatementsPage = () => {
                           <Calendar className="w-3 h-3" />
                           {tx.date}
                         </span>
-                        {tx.reference && <span className="text-xs">Реф: {String(tx.reference).slice(0, 20)}...</span>}
+                        {tx.operationType && (
+                          <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">{tx.operationType}</span>
+                        )}
+                        {tx.reference && <span className="text-xs">Реф: {String(tx.reference).slice(0, 15)}...</span>}
                       </div>
 
                       {tx.purpose && (
@@ -708,60 +711,95 @@ export const BankStatementsPage = () => {
                         </p>
                       )}
 
-                      {/* Object Assignment */}
+                      {/* Actions Row */}
                       <div className="mt-3 flex items-center gap-3 flex-wrap">
-                        <Building2 className="w-4 h-4 text-gray-400" />
-                        <select
-                          value={tx.objectId || 0}
-                          onChange={(e) => handleObjectAssign(index, Number(e.target.value) || null)}
-                          className={`text-sm border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                            tx.objectId ? 'border-green-300 bg-green-50' : 'border-gray-200'
-                          }`}
-                        >
-                          <option value={0}>-- Изберете обект --</option>
-                          {objects.map(obj => (
-                            <option key={obj.id} value={obj.id}>{obj.name}</option>
-                          ))}
-                        </select>
+                        {/* Object Assignment */}
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-gray-400" />
+                          <select
+                            value={tx.objectId || 0}
+                            onChange={(e) => handleObjectAssign(index, Number(e.target.value) || null)}
+                            className={`text-sm border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                              tx.objectId ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                            }`}
+                          >
+                            <option value={0}>-- Обект --</option>
+                            {objects.map(obj => (
+                              <option key={obj.id} value={obj.id}>{obj.name}</option>
+                            ))}
+                          </select>
+                        </div>
                         
-                        {tx.objectName && (
-                          <span className="text-sm text-green-600 flex items-center gap-1">
-                            <Check className="w-3 h-3" />
-                            Зачислен
-                          </span>
-                        )}
-                        
-                        {/* Technician Assignment for credit transactions */}
+                        {/* User Assignment (for credit - income to user) */}
                         {tx.type === 'credit' && (
-                          <>
+                          <div className="flex items-center gap-2">
+                            <UserPlus className="w-4 h-4 text-blue-400" />
                             <select
                               value={tx.technicianId || 0}
-                              onChange={(e) => handleAssignToTechnician(index, Number(e.target.value) || null)}
+                              onChange={(e) => handleAssignToUser(index, Number(e.target.value) || null)}
                               className={`text-sm border rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                                 tx.technicianId ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
                               }`}
                             >
-                              <option value={0}>-- Заприходи на техник --</option>
-                              {users.filter(u => u.role === 'technician').map(tech => (
-                                <option key={tech.id} value={tech.id}>{tech.name}</option>
+                              <option value={0}>-- Заприходи на --</option>
+                              {users.map(u => (
+                                <option key={u.id} value={u.id}>{u.name} ({u.role === 'director' ? 'Директор' : 'Техник'})</option>
                               ))}
                             </select>
-                            
-                            {tx.technicianName && (
-                              <span className="text-sm text-blue-600 flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                {tx.technicianName}
-                              </span>
-                            )}
-                            
+                          </div>
+                        )}
+                        
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 ml-auto">
+                          {/* Create Income (for credit transactions) */}
+                          {tx.type === 'credit' && (
                             <button
                               onClick={() => handleCreateIncomeFromTx(tx)}
-                              className="ml-auto px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1"
+                              title="Създай приход за обект"
                             >
                               <PlusCircle className="w-4 h-4" />
-                              Създай приход
+                              Приход
                             </button>
-                          </>
+                          )}
+                          
+                          {/* Create Expense (for debit transactions) */}
+                          {tx.type === 'debit' && (
+                            <button
+                              onClick={() => handleCreateExpenseFromTx(tx)}
+                              className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1"
+                              title="Създай разход за обект"
+                            >
+                              <MinusCircle className="w-4 h-4" />
+                              Разход
+                            </button>
+                          )}
+                          
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => handleDeleteTransaction(tx)}
+                            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                            title="Изтрий транзакция"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Изтрий
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Status indicators */}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {tx.objectName && (
+                          <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Обект: {tx.objectName}
+                          </span>
+                        )}
+                        {tx.technicianName && (
+                          <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Заприходен: {tx.technicianName}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -789,21 +827,21 @@ export const BankStatementsPage = () => {
                 <h3 className="font-semibold text-blue-800">Обобщение</h3>
                 <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-blue-700">Общо разходи:</span>
+                    <span className="text-blue-700">Общо дебит:</span>
                     <span className="ml-2 font-medium text-red-600">
                       -{stats.totalDebit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>
-                    <span className="text-blue-700">Общо приходи:</span>
+                    <span className="text-blue-700">Общо кредит:</span>
                     <span className="ml-2 font-medium text-green-600">
                       +{stats.totalCredit.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                     </span>
                   </div>
                   <div>
-                    <span className="text-blue-700">Зачислени към обекти:</span>
+                    <span className="text-blue-700">Разпределени:</span>
                     <span className="ml-2 font-medium text-blue-900">
-                      {transactions.filter(tx => tx.objectId).length} транзакции
+                      {transactions.filter(tx => tx.objectId || tx.technicianId).length} от {transactions.length}
                     </span>
                   </div>
                   <div>

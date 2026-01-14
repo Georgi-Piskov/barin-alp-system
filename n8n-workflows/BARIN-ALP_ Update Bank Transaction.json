@@ -39,12 +39,16 @@
         "documentId": {
           "__rl": true,
           "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
-          "mode": "id"
+          "mode": "list",
+          "cachedResultName": "BARIN_ALP_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
-          "value": "BankTransactions",
-          "mode": "list"
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo/edit#gid=1018740023"
         },
         "columns": {
           "mappingMode": "defineBelow",

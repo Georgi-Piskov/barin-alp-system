@@ -1,0 +1,221 @@
+{
+  "name": "HEFEST: Delete Bank Transaction",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hefest/bank-transactions/delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "c642165d-33bd-4839-910e-ab81fe95db37",
+      "name": "Webhook Delete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "hefest-bank-tx-delete"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst idToDelete = parseInt(body.id);\n\nif (!idToDelete) {\n  throw new Error('ID is required for deletion');\n}\n\nreturn [{ json: { idToDelete } }];"
+      },
+      "id": "a7dad356-6bb9-4974-a0ab-92fa09bd6063",
+      "name": "Get ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "HEFEST_DB",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1018740023"
+        },
+        "options": {}
+      },
+      "id": "0c965e2a-2ce8-41b8-b781-0847ac5f1209",
+      "name": "Read BankTransactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst idToDelete = $('Get ID').first().json.idToDelete;\n\n// Find row number (1-indexed, +2 for header and 0-index)\nlet rowToDelete = -1;\nfor (let i = 0; i < items.length; i++) {\n  if (parseInt(items[i].json.id) === idToDelete) {\n    rowToDelete = i + 2; // +1 for header, +1 for 1-indexing\n    break;\n  }\n}\n\nif (rowToDelete === -1) {\n  throw new Error('Bank transaction not found with ID: ' + idToDelete);\n}\n\nreturn [{ json: { rowToDelete, idToDelete } }];"
+      },
+      "id": "f55d42dd-eeeb-4212-85b3-7c780223fe90",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "HEFEST_DB",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018740023,
+          "mode": "list",
+          "cachedResultName": "BankTransactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1018740023"
+        },
+        "startIndex": "={{ $json.rowToDelete }}"
+      },
+      "id": "bd35f570-ad6a-452c-8716-46cea88b2555",
+      "name": "Delete Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true,\n    message: 'Bank transaction deleted successfully'\n  }\n}];"
+      },
+      "id": "64f301c4-2ee3-470c-a998-21faddbc2a25",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "d6df1864-e9a2-4753-bcc3-b162e6dfe0f3",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Delete": {
+      "main": [
+        [
+          {
+            "node": "Get ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ID": {
+      "main": [
+        [
+          {
+            "node": "Read BankTransactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read BankTransactions": {
+      "main": [
+        [
+          {
+            "node": "Find Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row": {
+      "main": [
+        [
+          {
+            "node": "Delete Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Row": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e46b49b2-0307-49a2-baa3-317834dedf39",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7204f8cf331ce45a25a617a4d887233056efe67a0537cd171194c6ba0ab4002"
+  },
+  "id": "0bRPGDXHdxnQIQVG",
+  "tags": []
+}

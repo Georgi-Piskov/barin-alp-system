@@ -798,6 +798,28 @@ export const apiService = {
     }
   },
 
+  async deleteBankTransaction(id: number): Promise<ApiResponse<void>> {
+    if (DEMO_MODE) {
+      return { success: true };
+    }
+
+    const url = buildApiUrl(API_CONFIG.ENDPOINTS.DELETE_BANK_TRANSACTION);
+    console.log('DELETE BANK TX - URL:', url);
+    console.log('DELETE BANK TX - ID:', id);
+
+    try {
+      const response = await api.post(url, { id });
+      
+      console.log('Delete Bank Transaction response from n8n:', response.data);
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Delete Bank Transaction error:', error);
+      console.error('Error response:', error.response?.data);
+      return { success: false, error: 'Грешка при изтриване на банкова транзакция' };
+    }
+  },
+
   // ==================== USERS ====================
   async getUsers(): Promise<ApiResponse<User[]>> {
     if (DEMO_MODE) {
