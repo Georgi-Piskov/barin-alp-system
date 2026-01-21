@@ -1,5 +1,55 @@
 # BARIN ALP System - Състояние на проекта
-**Последна актуализация:** 14 януари 2026
+**Последна актуализация:** 21 януари 2026
+
+## 📱 PWA ПОДДРЪЖКА (14-21 януари 2026)
+
+### Какво беше направено:
+
+#### ✅ Progressive Web App (PWA) добавена
+- Приложението вече може да се инсталира на телефон/компютър
+- Работи офлайн с кеширане на ресурси
+- Service Worker за background sync
+
+#### ✅ Файлове създадени/променени:
+- `vite.config.ts` - добавен VitePWA plugin
+- `public/manifest.json` - PWA manifest файл
+- `public/icon-192x192.png` - икона за PWA
+- `public/icon-512x512.png` - голяма икона за PWA
+- `public/icon.svg` - векторна икона
+- `public/favicon.svg` - favicon
+- `index.html` - добавени PWA мета тагове
+
+#### ✅ Добавен npm package:
+- `vite-plugin-pwa` - за генериране на service worker
+
+### 📋 КАК ДА ИНСТАЛИРАШ PWA:
+1. Отвори https://georgi-piskov.github.io/barin-alp-system/ в Chrome/Edge
+2. Кликни иконата за инсталиране в адресната лента (⊕)
+3. Или: три точки (⋮) → "Инсталиране на БАРИН АЛП..."
+
+---
+
+## 🔧 ПОПРАВКИ НА N8N WORKFLOWS (14 януари 2026)
+
+### Проблем:
+- Промените по банкови транзакции не се запазваха след refresh
+- Причина: `sheetName` в workflows използваше текстово име вместо GID
+
+### Какво беше поправено:
+
+#### ✅ BARIN-ALP_ Update Bank Transaction.json
+- Променено `sheetName` от `"BankTransactions"` на GID `1018740023`
+
+#### ✅ HEFEST_ Update Bank Transaction.json  
+- Същата поправка - използва GID вместо текстово име
+
+### 📋 ДЕЙСТВИЯ ЗА ПОТРЕБИТЕЛЯ:
+1. **Ре-импортирай поправените workflows в n8n:**
+   - `n8n-workflows/BARIN-ALP_ Update Bank Transaction.json`
+   - `n8n-workflows/hefest/HEFEST_ Update Bank Transaction.json`
+2. **Активирай workflows**
+
+---
 
 ## 🏦 БАНКОВИ ИЗВЛЕЧЕНИЯ - ОПРОСТЕН ИНТЕРФЕЙС (14 януари 2026)
 
