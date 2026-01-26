@@ -1,5 +1,32 @@
 # BARIN ALP System - Състояние на проекта
-**Последна актуализация:** 21 януари 2026
+**Последна актуализация:** 26 януари 2026
+
+---
+
+## 🔧 ПОПРАВКА НА HEFEST UPDATE OBJECT (26 януари 2026)
+
+### Проблем:
+При редакция на обект в профила на **ХЕФЕСТ** се създаваше нов обект с празно име и същото местоположение, вместо да се актуализира съществуващият.
+
+### Причина:
+`HEFEST_ Update Object.json` workflow използваше `mode: "list"` с текстово име "HEFEST_DB" за documentId. Когато Google Sheets node не можеше да намери реда по ID коректно, операцията `appendOrUpdate` създаваше **нов ред** вместо да актуализира.
+
+### Какво беше поправено:
+
+#### ✅ HEFEST_ Update Object.json
+- Променено `documentId` от `mode: "list"` с "HEFEST_DB" на `mode: "id"` с директен sheetId `1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g`
+- Променено `sheetName` от `mode: "list"` на `mode: "id"`
+
+### 📋 ДЕЙСТВИЯ ЗА ПОТРЕБИТЕЛЯ:
+1. **Реимпортирай поправения workflow в n8n:**
+   - `n8n-workflows/hefest/HEFEST_ Update Object.json`
+2. **Активирай workflow-а**
+3. **Тествай** - редактирай обект в ХЕФЕСТ профила
+
+### ⚠️ Ако проблемът продължава:
+Провери дали GID-то за OBJECTS sheet в HEFEST spreadsheet-а е `1423865567`. Отвори Google Sheets и виж URL-а когато си на OBJECTS tab-а.
+
+---
 
 ## 📱 PWA ПОДДРЪЖКА (14-21 януари 2026)
 

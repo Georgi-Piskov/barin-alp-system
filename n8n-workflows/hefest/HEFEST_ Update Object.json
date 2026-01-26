@@ -25,13 +25,13 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "HEFEST_DB",
-          "mode": "list"
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
         },
         "sheetName": {
           "__rl": true,
           "value": 1423865567,
-          "mode": "list",
+          "mode": "id",
           "cachedResultName": "OBJECTS",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g/edit#gid=1423865567"
         },
