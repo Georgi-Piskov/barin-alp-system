@@ -1,5 +1,37 @@
 # BARIN ALP System - Състояние на проекта
-**Последна актуализация:** 26 януари 2026
+**Последна актуализация:** 2 февруари 2026
+
+---
+
+## 💾 ЕЖЕДНЕВЕН BACKUP НА GOOGLE SHEETS (2 февруари 2026)
+
+### Какво беше направено:
+Създадени са n8n workflows за автоматичен ежедневен backup на Google Sheets таблиците.
+
+### ✅ Нови n8n workflows:
+
+#### BARIN-ALP_ Daily Backup.json
+- **Стартира:** Всеки ден в 3:00 сутринта (Europe/Sofia)
+- **Копира:** `BARIN_ALP_DB` → `BARIN_ALP_DB_BACKUP_YYYY-MM-DD`
+- **Source ID:** `1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo`
+
+#### HEFEST_ Daily Backup.json
+- **Стартира:** Всеки ден в 3:15 сутринта (Europe/Sofia)
+- **Копира:** `HEFEST_DB` → `HEFEST_DB_BACKUP_YYYY-MM-DD`
+- **Source ID:** `1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g`
+
+### Структура на workflow:
+```
+Schedule Trigger → Generate Backup Name → Copy Spreadsheet → Success Response → [Telegram Notification]
+```
+
+### 📋 ДЕЙСТВИЯ ЗА ПОТРЕБИТЕЛЯ:
+1. **Импортирай workflows в n8n:**
+   - `n8n-workflows/BARIN-ALP_ Daily Backup.json`
+   - `n8n-workflows/hefest/HEFEST_ Daily Backup.json`
+2. **Конфигурирай Google Drive credential** в node "Copy Spreadsheet"
+3. **Активирай workflows**
+4. (Опционално) Активирай Telegram нотификации с правилен chatId
 
 ---
 

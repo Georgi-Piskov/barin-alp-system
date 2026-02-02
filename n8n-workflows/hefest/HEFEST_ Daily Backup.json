@@ -1,0 +1,163 @@
+{
+  "name": "HEFEST: Daily Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 3,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-hefest-backup",
+      "name": "Daily 3:15AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate backup filename with current date\nconst now = new Date();\nconst dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD\nconst timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS\n\nreturn [{\n  json: {\n    backupName: `HEFEST_DB_BACKUP_${dateStr}`,\n    dateStr: dateStr,\n    timestamp: now.toISOString(),\n    sourceFileId: '1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g'\n  }\n}];"
+      },
+      "id": "code-generate-backup-name-hefest",
+      "name": "Generate Backup Name",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.sourceFileId }}",
+          "mode": "id"
+        },
+        "options": {
+          "name": "={{ $json.backupName }}"
+        }
+      },
+      "id": "google-drive-copy-hefest",
+      "name": "Copy Spreadsheet",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        340,
+        300
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GP Google Sheets account 3",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return success response with backup details\nconst copiedFile = $('Copy Spreadsheet').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: 'Backup created successfully',\n    backupId: copiedFile.id,\n    backupName: copiedFile.name,\n    backupUrl: copiedFile.webViewLink || `https://docs.google.com/spreadsheets/d/${copiedFile.id}`,\n    createdAt: new Date().toISOString(),\n    company: 'HEFEST'\n  }\n}];"
+      },
+      "id": "code-success-response-hefest",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "=✅ **ХЕФЕСТ - Ежедневен Backup**\n\n📅 Дата: {{ $json.createdAt }}\n📁 Име: {{ $json.backupName }}\n🔗 Линк: {{ $json.backupUrl }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-notify-hefest",
+      "name": "Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot",
+          "name": "Telegram Bot"
+        }
+      },
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Daily 3:15AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Backup Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Backup Name": {
+      "main": [
+        [
+          {
+            "node": "Copy Spreadsheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy Spreadsheet": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Sofia"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "HEFEST"
+    },
+    {
+      "name": "Backup"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
