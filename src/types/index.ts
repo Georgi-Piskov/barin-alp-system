@@ -60,6 +60,7 @@ export interface InventoryItem {
   objectId: number | null;
   objectName: string | null;
   photos: string[]; // URLs
+  quantity: number; // Бройки (default: 1)
 }
 
 // Transaction types

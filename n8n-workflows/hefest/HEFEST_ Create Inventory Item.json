@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "HEFEST: Create Inventory Item",
   "nodes": [
     {
@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const existingItems = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Calculate next ID\nlet maxId = 0;\nexistingItems.forEach(item => {\n  const id = Number(item.json.id);\n  if (id > maxId) maxId = id;\n});\nconst newId = maxId + 1;\n\n// Serialize photos to JSON string for Google Sheets\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{\n  json: {\n    id: newId,\n    name: body.name,\n    category: body.category || 'Р”СЂСѓРіРё',\n    status: body.status || 'available',\n    assignedTo: body.assignedTo || '',\n    assignedToName: body.assignedToName || '',\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    photos: photosJson\n  }\n}];"
+        "jsCode": "const existingItems = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Calculate next ID\nlet maxId = 0;\nexistingItems.forEach(item => {\n  const id = Number(item.json.id);\n  if (id > maxId) maxId = id;\n});\nconst newId = maxId + 1;\n\n// Serialize photos to JSON string for Google Sheets\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{\n  json: {\n    id: newId,\n    name: body.name,\n    category: body.category || 'Р”СЂСѓРіРё',\n    status: body.status || 'available',\n    assignedTo: body.assignedTo || '',\n    assignedToName: body.assignedToName || '',\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    photos: photosJson,\n    quantity: body.quantity || 1\n  }\n}];"
       },
       "id": "2a6bd019-c46a-4697-a087-83d0b8b64294",
       "name": "Prepare Item",
@@ -202,7 +202,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $('Prepare Item').first().json;\nconst body = $('Webhook Create').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: item.id,\n      name: item.name,\n      category: item.category,\n      status: item.status,\n      assignedTo: body.assignedTo || null,\n      assignedToName: body.assignedToName || null,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null,\n      photos: body.photos || []\n    }\n  }\n}];"
+        "jsCode": "const item = $('Prepare Item').first().json;\nconst body = $('Webhook Create').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: item.id,\n      name: item.name,\n      category: item.category,\n      status: item.status,\n      assignedTo: body.assignedTo || null,\n      assignedToName: body.assignedToName || null,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null,\n      photos: body.photos || [],\n      quantity: body.quantity || 1\n    }\n  }\n}];"
       },
       "id": "900aaca9-926b-41f4-85e1-df07bb436f8c",
       "name": "Format Response",
@@ -345,5 +345,3 @@
   "id": "aolISmwx0gqmI0WE",
   "tags": []
 }
-
-

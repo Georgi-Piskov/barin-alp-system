@@ -18,7 +18,8 @@ import {
   CheckCircle,
   Clock,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Scissors
 } from 'lucide-react';
 import { InventoryModal } from './InventoryModal';
 
@@ -68,6 +69,8 @@ export const InventoryPage = () => {
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [photoIndices, setPhotoIndices] = useState<Record<number, number>>({});
+  const [splitItem, setSplitItem] = useState<InventoryItem | null>(null);
+  const [splitQuantity, setSplitQuantity] = useState(1);
 
   useEffect(() => {
     loadData();
@@ -169,14 +172,54 @@ export const InventoryPage = () => {
     setEditingItem(null);
   };
 
+  const handleSplit = (item: InventoryItem) => {
+    setSplitItem(item);
+    setSplitQuantity(1);
+    setOpenMenuId(null);
+  };
+
+  const handleSplitConfirm = async () => {
+    if (!splitItem || splitQuantity <= 0 || splitQuantity >= (splitItem.quantity || 1)) return;
+
+    // Намали бройките на оригиналния артикул
+    const remainingQty = (splitItem.quantity || 1) - splitQuantity;
+    const updateRes = await apiService.updateInventoryItem(splitItem.id, {
+      ...splitItem,
+      quantity: remainingQty,
+    });
+
+    if (updateRes.success && updateRes.data) {
+      // Създай нов артикул с отделените бройки (същите снимки - само URL-и)
+      const { id, ...itemWithoutId } = splitItem;
+      const createRes = await apiService.createInventoryItem({
+        ...itemWithoutId,
+        quantity: splitQuantity,
+        assignedTo: null,
+        assignedToName: null,
+        objectId: null,
+        objectName: null,
+        status: 'available',
+      });
+
+      if (createRes.success && createRes.data) {
+        setItems(items.map(i => i.id === splitItem.id ? updateRes.data! : i).concat(createRes.data));
+      } else {
+        // Обнови поне оригиналния
+        setItems(items.map(i => i.id === splitItem.id ? updateRes.data! : i));
+      }
+    }
+
+    setSplitItem(null);
+  };
+
   const categories = Array.from(new Set(items.map(item => item.category))).sort();
 
   const stats = {
-    total: items.length,
-    available: items.filter(i => i.status === 'available').length,
-    inUse: items.filter(i => i.status === 'in-use').length,
-    maintenance: items.filter(i => i.status === 'maintenance').length,
-    lost: items.filter(i => i.status === 'lost').length,
+    total: items.reduce((sum, i) => sum + (i.quantity || 1), 0),
+    available: items.filter(i => i.status === 'available').reduce((sum, i) => sum + (i.quantity || 1), 0),
+    inUse: items.filter(i => i.status === 'in-use').reduce((sum, i) => sum + (i.quantity || 1), 0),
+    maintenance: items.filter(i => i.status === 'maintenance').reduce((sum, i) => sum + (i.quantity || 1), 0),
+    lost: items.filter(i => i.status === 'lost').reduce((sum, i) => sum + (i.quantity || 1), 0),
   };
 
   if (isLoading) {
@@ -434,6 +477,15 @@ export const InventoryPage = () => {
                           <Edit className="w-4 h-4" />
                           Редактирай
                         </button>
+                        {(item.quantity || 1) > 1 && (
+                          <button
+                            onClick={() => handleSplit(item)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50"
+                          >
+                            <Scissors className="w-4 h-4" />
+                            Раздели
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(item.id)}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -448,7 +500,14 @@ export const InventoryPage = () => {
                 
                 {/* Info */}
                 <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-1">{item.name}</h3>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                    {(item.quantity || 1) > 1 && (
+                      <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
+                        x{item.quantity} бр.
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-500 mb-3">{item.category}</p>
                   
                   <div className="space-y-2 text-sm">
@@ -500,6 +559,64 @@ export const InventoryPage = () => {
             alt="Preview"
             className="max-w-full max-h-full object-contain rounded-lg"
           />
+        </div>
+      )}
+
+      {/* Split Modal */}
+      {splitItem && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setSplitItem(null); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                <Scissors className="w-5 h-5 text-indigo-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Раздели артикул</h2>
+            </div>
+            
+            <p className="text-gray-600 mb-4">
+              <strong>{splitItem.name}</strong> — налични: <strong>{splitItem.quantity || 1} бр.</strong>
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              Колко броя да отделите? Ще се създаде нов артикул със същото име и снимки.
+            </p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Бройки за отделяне
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={(splitItem.quantity || 1) - 1}
+                value={splitQuantity}
+                onChange={(e) => setSplitQuantity(Math.max(1, Math.min((splitItem.quantity || 1) - 1, parseInt(e.target.value) || 1)))}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Оставащи при оригинала: <strong>{(splitItem.quantity || 1) - splitQuantity} бр.</strong>
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSplitItem(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50"
+              >
+                Отказ
+              </button>
+              <button
+                onClick={handleSplitConfirm}
+                disabled={splitQuantity <= 0 || splitQuantity >= (splitItem.quantity || 1)}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Scissors className="w-4 h-4" />
+                Раздели
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

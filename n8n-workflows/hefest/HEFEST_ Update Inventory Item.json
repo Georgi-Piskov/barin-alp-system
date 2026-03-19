@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "HEFEST: Update Inventory Item",
   "nodes": [
     {
@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook Update').first().json.body;\n\n// Serialize photos to JSON string\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{\n  json: {\n    id: body.id,\n    name: body.name,\n    category: body.category || 'Р”СЂСѓРіРё',\n    status: body.status || 'available',\n    assignedTo: body.assignedTo || '',\n    assignedToName: body.assignedToName || '',\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    photos: photosJson\n  }\n}];"
+        "jsCode": "const body = $('Webhook Update').first().json.body;\n\n// Serialize photos to JSON string\nconst photosJson = JSON.stringify(body.photos || []);\n\nreturn [{\n  json: {\n    id: body.id,\n    name: body.name,\n    category: body.category || 'Р”СЂСѓРіРё',\n    status: body.status || 'available',\n    assignedTo: body.assignedTo || '',\n    assignedToName: body.assignedToName || '',\n    objectId: body.objectId || '',\n    objectName: body.objectName || '',\n    photos: photosJson,\n    quantity: body.quantity || 1\n  }\n}];"
       },
       "id": "93a8128e-4574-4436-9da8-c983d98da11f",
       "name": "Prepare Update",
@@ -182,7 +182,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook Update').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: body.id,\n      name: body.name,\n      category: body.category,\n      status: body.status,\n      assignedTo: body.assignedTo || null,\n      assignedToName: body.assignedToName || null,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null,\n      photos: body.photos || []\n    }\n  }\n}];"
+        "jsCode": "const body = $('Webhook Update').first().json.body;\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      id: body.id,\n      name: body.name,\n      category: body.category,\n      status: body.status,\n      assignedTo: body.assignedTo || null,\n      assignedToName: body.assignedToName || null,\n      objectId: body.objectId || null,\n      objectName: body.objectName || null,\n      photos: body.photos || [],\n      quantity: body.quantity || 1\n    }\n  }\n}];"
       },
       "id": "ae89a012-91e3-4fb0-9f0e-7ea37a46ea6c",
       "name": "Format Response",
@@ -266,5 +266,3 @@
   "id": "rGR2oGeSYQsN57Mb",
   "tags": []
 }
-
-

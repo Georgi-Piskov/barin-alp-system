@@ -81,6 +81,7 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
     objectId: null as number | null,
     objectName: null as string | null,
     photos: [] as string[],
+    quantity: 1,
   });
   const [pendingPhotos, setPendingPhotos] = useState<string[]>([]); // New photos to upload
   const [isSaving, setIsSaving] = useState(false);
@@ -98,6 +99,7 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
         objectId: item.objectId,
         objectName: item.objectName,
         photos: item.photos || [],
+        quantity: item.quantity || 1,
       });
     }
   }, [item]);
@@ -278,6 +280,20 @@ export const InventoryModal = ({ item, objects, users, onSave, onClose }: Invent
               required
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               placeholder="Напр. Бормашина Bosch"
+            />
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Бройки *
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
