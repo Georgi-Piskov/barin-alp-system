@@ -188,3 +188,15 @@ export interface BankStatementParseResult {
   groupedFeesCount?: number;
   skippedTransactions?: number;
 }
+
+// Cash Withdrawal types - Кеш тегления от банкомат
+export interface CashWithdrawal {
+  id: number;
+  date: string;
+  amount: number;
+  currency: string;
+  description: string;
+  createdBy: number;
+  createdByName: string;
+  createdAt?: string;
+}

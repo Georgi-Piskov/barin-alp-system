@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
-import { BankTransaction, ConstructionObject, Income, User, Transaction } from '../../types';
+import { BankTransaction, ConstructionObject, Income, User, Transaction, CashWithdrawal } from '../../types';
 import { 
   FileUp,
   FileText,
@@ -20,9 +20,14 @@ import {
   Save,
   Trash2,
   UserPlus,
-  MinusCircle
+  MinusCircle,
+  Wallet,
+  Banknote
 } from 'lucide-react';
 import { IncomeModal } from '../Incomes/IncomeModal';
+
+// Cash tracking starts from this date (everything before is ignored)
+const CASH_TRACKING_START = '2026-05-01';
 
 export const BankStatementsPage = () => {
   const { user } = useAuthStore();
@@ -53,15 +58,28 @@ export const BankStatementsPage = () => {
   const [incomeFromBankTx, setIncomeFromBankTx] = useState<Partial<Income> | null>(null);
   const [selectedBankTxId, setSelectedBankTxId] = useState<number | null>(null);
 
+  // Cash withdrawal tracking
+  const [cashWithdrawals, setCashWithdrawals] = useState<CashWithdrawal[]>([]);
+  const [manualTransactions, setManualTransactions] = useState<Transaction[]>([]);
+  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+  const [cashForm, setCashForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    description: '',
+  });
+  const [isSavingCash, setIsSavingCash] = useState(false);
+
   const isDirector = user?.role === 'director';
 
-  // Load objects and users for assignment
+  // Load objects, users, cash withdrawals and manual transactions
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [objectsRes, usersRes] = await Promise.all([
+        const [objectsRes, usersRes, cashRes, txRes] = await Promise.all([
           apiService.getObjects(),
-          apiService.getUsers()
+          apiService.getUsers(),
+          apiService.getCashWithdrawals(),
+          apiService.getTransactions()
         ]);
         if (objectsRes.success && objectsRes.data) {
           setObjects(objectsRes.data);
@@ -69,12 +87,81 @@ export const BankStatementsPage = () => {
         if (usersRes.success && usersRes.data) {
           setUsers(usersRes.data);
         }
+        if (cashRes.success && cashRes.data) {
+          setCashWithdrawals(Array.isArray(cashRes.data) ? cashRes.data : []);
+        }
+        if (txRes.success && txRes.data) {
+          setManualTransactions(Array.isArray(txRes.data) ? txRes.data : []);
+        }
       } catch (err) {
         console.error('Error loading data:', err);
       }
     };
     loadData();
   }, []);
+
+  // Save new cash withdrawal
+  const handleSaveCashWithdrawal = async () => {
+    const amount = parseFloat(cashForm.amount);
+    if (!cashForm.date || !amount || amount <= 0) {
+      setError('Моля, въведете валидна дата и сума');
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
+    setIsSavingCash(true);
+    try {
+      const response = await apiService.createCashWithdrawal({
+        date: cashForm.date,
+        amount,
+        currency: 'EUR',
+        description: cashForm.description || '',
+        createdBy: user?.id || 0,
+        createdByName: user?.name || '',
+      });
+
+      if (response.success && response.data) {
+        setCashWithdrawals(prev => [...prev, response.data!]);
+        setIsCashModalOpen(false);
+        setCashForm({
+          date: new Date().toISOString().split('T')[0],
+          amount: '',
+          description: '',
+        });
+        setSuccessMessage('Кеш тегленето е записано');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.error || 'Грешка при запазване');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('Error saving cash withdrawal:', err);
+      setError('Грешка при запазване');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsSavingCash(false);
+    }
+  };
+
+  // Delete cash withdrawal
+  const handleDeleteCashWithdrawal = async (cw: CashWithdrawal) => {
+    if (!window.confirm(`Изтриване на теглене от ${cw.date} за ${cw.amount.toFixed(2)} €?`)) return;
+    try {
+      const response = await apiService.deleteCashWithdrawal(cw.id);
+      if (response.success) {
+        setCashWithdrawals(prev => prev.filter(x => x.id !== cw.id));
+        setSuccessMessage('Записът е изтрит');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.error || 'Грешка при изтриване');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('Error deleting cash withdrawal:', err);
+      setError('Грешка при изтриване');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
 
   // Load saved bank transactions on mount
   useEffect(() => {
@@ -429,10 +516,162 @@ export const BankStatementsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Банкови извлечения</h1>
-        <p className="text-gray-500">Качете CSV от Asset Bank и разпределете транзакциите</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Банкови извлечения</h1>
+          <p className="text-gray-500">Качете CSV от Asset Bank и разпределете транзакциите</p>
+        </div>
+        <button
+          onClick={() => setIsCashModalOpen(true)}
+          className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2 shadow-sm"
+        >
+          <Banknote className="w-5 h-5" />
+          Запиши изтеглен КЕШ
+        </button>
       </div>
+
+      {/* Cash Balance Section */}
+      {(() => {
+        const trackedWithdrawals = cashWithdrawals.filter(w => w.date >= CASH_TRACKING_START);
+        const trackedCashExpenses = manualTransactions.filter(
+          t => t.method === 'cash' && t.type === 'expense' && t.date >= CASH_TRACKING_START
+        );
+        const totalWithdrawn = trackedWithdrawals.reduce((s, w) => s + (Number(w.amount) || 0), 0);
+        const totalSpent = trackedCashExpenses.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+        const balance = totalWithdrawn - totalSpent;
+
+        // Group by month (YYYY-MM)
+        const monthsMap: Record<string, { withdrawn: number; spent: number }> = {};
+        const monthKey = (d: string) => (d || '').slice(0, 7);
+        for (const w of trackedWithdrawals) {
+          const k = monthKey(w.date);
+          if (!k) continue;
+          if (!monthsMap[k]) monthsMap[k] = { withdrawn: 0, spent: 0 };
+          monthsMap[k].withdrawn += Number(w.amount) || 0;
+        }
+        for (const t of trackedCashExpenses) {
+          const k = monthKey(t.date);
+          if (!k) continue;
+          if (!monthsMap[k]) monthsMap[k] = { withdrawn: 0, spent: 0 };
+          monthsMap[k].spent += Number(t.amount) || 0;
+        }
+        const months = Object.keys(monthsMap).sort().reverse();
+        const monthLabel = (k: string) => {
+          const [y, m] = k.split('-');
+          const names = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
+          return `${names[parseInt(m, 10) - 1] || m} ${y}`;
+        };
+
+        return (
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-sm border border-amber-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Кеш баланс</h2>
+                <p className="text-xs text-gray-500">От {CASH_TRACKING_START} до днес</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="bg-white rounded-lg p-3 border border-amber-100">
+                <p className="text-xs text-gray-500 mb-1">Изтеглени</p>
+                <p className="text-lg font-bold text-blue-600">
+                  {totalWithdrawn.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-amber-100">
+                <p className="text-xs text-gray-500 mb-1">Разходвани (кеш)</p>
+                <p className="text-lg font-bold text-red-600">
+                  {totalSpent.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-amber-100">
+                <p className="text-xs text-gray-500 mb-1">Разлика</p>
+                <p className={`text-lg font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {balance >= 0 ? '+' : ''}{balance.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                </p>
+              </div>
+            </div>
+
+            {months.length > 0 && (
+              <div className="bg-white rounded-lg border border-amber-100 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-amber-100/60">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Месец</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Изтеглени</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Разходи</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Разлика</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {months.map(k => {
+                      const m = monthsMap[k];
+                      const diff = m.withdrawn - m.spent;
+                      return (
+                        <tr key={k} className="border-t border-amber-50">
+                          <td className="px-3 py-2 font-medium text-gray-900">{monthLabel(k)}</td>
+                          <td className="px-3 py-2 text-right text-blue-600">{m.withdrawn.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €</td>
+                          <td className="px-3 py-2 text-right text-red-600">{m.spent.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €</td>
+                          <td className={`px-3 py-2 text-right font-semibold ${diff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {diff >= 0 ? '+' : ''}{diff.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {trackedWithdrawals.length > 0 && (
+              <div className="mt-4">
+                <details className="bg-white rounded-lg border border-amber-100 p-3">
+                  <summary className="text-sm font-medium text-gray-700 cursor-pointer">
+                    История на тегления ({trackedWithdrawals.length})
+                  </summary>
+                  <div className="mt-3 max-h-60 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Дата</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Сума</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Описание</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">От</th>
+                          <th className="px-3 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...trackedWithdrawals].sort((a, b) => b.date.localeCompare(a.date)).map(w => (
+                          <tr key={w.id} className="border-t border-gray-100">
+                            <td className="px-3 py-2 text-gray-900">{w.date}</td>
+                            <td className="px-3 py-2 text-right font-medium text-blue-600">
+                              {Number(w.amount).toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
+                            </td>
+                            <td className="px-3 py-2 text-gray-700">{w.description || '-'}</td>
+                            <td className="px-3 py-2 text-gray-500 text-xs">{w.createdByName}</td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                onClick={() => handleDeleteCashWithdrawal(w)}
+                                className="text-red-500 hover:text-red-700"
+                                title="Изтрий"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Upload Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -884,6 +1123,75 @@ export const BankStatementsPage = () => {
         prefillData={incomeFromBankTx}
         bankTransactionId={selectedBankTxId}
       />
+
+      {/* Cash Withdrawal Modal */}
+      {isCashModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-amber-600" />
+                <h3 className="text-lg font-bold text-gray-900">Запиши изтеглен кеш</h3>
+              </div>
+              <button
+                onClick={() => setIsCashModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Дата *</label>
+                <input
+                  type="date"
+                  value={cashForm.date}
+                  onChange={e => setCashForm({ ...cashForm, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Сума (€) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={cashForm.amount}
+                  onChange={e => setCashForm({ ...cashForm, amount: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                <input
+                  type="text"
+                  value={cashForm.description}
+                  onChange={e => setCashForm({ ...cashForm, description: e.target.value })}
+                  placeholder="Напр. теглене от банкомат"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => setIsCashModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Отказ
+              </button>
+              <button
+                onClick={handleSaveCashWithdrawal}
+                disabled={isSavingCash}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSavingCash ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Запиши
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

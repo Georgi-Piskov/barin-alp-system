@@ -3,7 +3,41 @@
 
 ---
 
-## 💾 ЕЖЕДНЕВЕН BACKUP НА GOOGLE SHEETS (2 февруари 2026)
+## � ПРОСЛЕДЯВАНЕ НА КЕШ БАЛАНС (2 февруари 2026)
+
+### Какво беше направено:
+Добавена е функционалност за ръчно записване на изтеглен от банкомата кеш и автоматично изчисление на месечен баланс в раздел "Банка".
+
+### Логика:
+- **Кеш балансът** = `SUM(изтеглени суми)` − `SUM(transactions с method='cash' AND type='expense')`
+- **Стартира от:** `2026-05-01` (по-стари записи се игнорират)
+- **Месечен breakdown** показва за всеки календарен месец: изтеглено, разходвано, разлика
+
+### ✅ Нови n8n workflows (BARIN + HEFEST):
+- `BARIN-ALP_ Get Cash Withdrawals.json` → `GET /barin-alp/cash-withdrawals`
+- `BARIN-ALP_ Create Cash Withdrawal.json` → `POST /barin-alp/cash-withdrawals/create`
+- `BARIN-ALP_ Delete Cash Withdrawal.json` → `POST /barin-alp/cash-withdrawals/delete`
+- `hefest/HEFEST_ Get Cash Withdrawals.json` → `GET /hefest/cash-withdrawals`
+- `hefest/HEFEST_ Create Cash Withdrawal.json` → `POST /hefest/cash-withdrawals/create`
+- `hefest/HEFEST_ Delete Cash Withdrawal.json` → `POST /hefest/cash-withdrawals/delete`
+
+### ✅ Нови файлове / промени във фронтенда:
+- `src/types/index.ts` — `CashWithdrawal` interface
+- `src/config/api.ts` — 3 нови endpoint-а
+- `src/services/api.ts` — `getCashWithdrawals()`, `createCashWithdrawal()`, `deleteCashWithdrawal()`
+- `src/pages/BankStatements/BankStatementsPage.tsx` — бутон "Запиши изтеглен КЕШ", модал, "Кеш баланс" карта с месечен breakdown и история на тегленията
+
+### 📋 ДЕЙСТВИЯ ЗА ПОТРЕБИТЕЛЯ:
+1. **Създай нов sheet `CashWithdrawals`** в **двете** Google Sheets таблици (BARIN и HEFEST) с колони A-H:
+   `id | date | amount | currency | description | createdBy | createdByName | createdAt`
+2. **Импортирай 6-те нови n8n workflows** (3 BARIN + 3 HEFEST)
+3. **Re-bind Google Sheets credential** във всеки workflow и избери `CashWithdrawals` sheet (трябва да съществува, за да го избере dropdown-ът)
+4. **Активирай всичките 6 workflows**
+5. Деплой на фронтенда (`npm run build && deploy`)
+
+---
+
+## �💾 ЕЖЕДНЕВЕН BACKUP НА GOOGLE SHEETS (2 февруари 2026)
 
 ### Какво беше направено:
 Създадени са n8n workflows за автоматичен ежедневен backup на Google Sheets таблиците.

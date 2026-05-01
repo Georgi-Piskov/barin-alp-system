@@ -11,6 +11,7 @@ import {
   DashboardStats,
   BankStatementParseResult,
   BankTransaction,
+  CashWithdrawal,
 } from '../types';
 
 // Create axios instance
@@ -817,6 +818,53 @@ export const apiService = {
       console.error('Delete Bank Transaction error:', error);
       console.error('Error response:', error.response?.data);
       return { success: false, error: 'Грешка при изтриване на банкова транзакция' };
+    }
+  },
+
+  // ==================== CASH WITHDRAWALS ====================
+  async getCashWithdrawals(): Promise<ApiResponse<CashWithdrawal[]>> {
+    if (DEMO_MODE) {
+      return { success: true, data: [] };
+    }
+
+    try {
+      const response = await api.get(buildApiUrl(API_CONFIG.ENDPOINTS.GET_CASH_WITHDRAWALS));
+      const data = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('Get Cash Withdrawals error:', error);
+      return { success: false, error: 'Грешка при зареждане на кеш тегления' };
+    }
+  },
+
+  async createCashWithdrawal(withdrawal: Omit<CashWithdrawal, 'id'>): Promise<ApiResponse<CashWithdrawal>> {
+    if (DEMO_MODE) {
+      return { success: true, data: { ...withdrawal, id: Date.now() } as CashWithdrawal };
+    }
+
+    try {
+      const response = await api.post(
+        buildApiUrl(API_CONFIG.ENDPOINTS.CREATE_CASH_WITHDRAWAL),
+        withdrawal
+      );
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Create Cash Withdrawal error:', error);
+      return { success: false, error: 'Грешка при записване на кеш теглене' };
+    }
+  },
+
+  async deleteCashWithdrawal(id: number): Promise<ApiResponse<void>> {
+    if (DEMO_MODE) {
+      return { success: true };
+    }
+
+    try {
+      await api.post(buildApiUrl(API_CONFIG.ENDPOINTS.DELETE_CASH_WITHDRAWAL), { id });
+      return { success: true };
+    } catch (error: any) {
+      console.error('Delete Cash Withdrawal error:', error);
+      return { success: false, error: 'Грешка при изтриване на кеш теглене' };
     }
   },
 

@@ -1,0 +1,157 @@
+{
+  "name": "BARIN-ALP: Create Cash Withdrawal",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barin-alp/cash-withdrawals/create",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "wh-create-cash-barin",
+      "name": "Webhook Create",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "barin-cash-create"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "CashWithdrawals",
+          "mode": "list",
+          "cachedResultName": "CashWithdrawals"
+        },
+        "options": {}
+      },
+      "id": "read-id-cash-barin",
+      "name": "Read For ID",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [224, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst body = $('Webhook Create').first().json.body;\n\n// Generate new ID\nlet maxId = 0;\nfor (const row of rows) {\n  const id = Number(row.json.id) || 0;\n  if (id > maxId) maxId = id;\n}\nconst newId = maxId + 1;\n\nreturn [{\n  json: {\n    id: newId,\n    date: body.date || new Date().toISOString().split('T')[0],\n    amount: Number(body.amount) || 0,\n    currency: body.currency || 'EUR',\n    description: body.description || '',\n    createdBy: Number(body.createdBy) || 0,\n    createdByName: body.createdByName || '',\n    createdAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-cash-barin",
+      "name": "Prepare Cash",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Mvg9vxzp7LyYwNor0i8o8LvqYiF0ID4WD3Af58zkVTo",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "CashWithdrawals",
+          "mode": "list",
+          "cachedResultName": "CashWithdrawals"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "date": "={{ $json.date }}",
+            "amount": "={{ $json.amount }}",
+            "currency": "={{ $json.currency }}",
+            "description": "={{ $json.description }}",
+            "createdBy": "={{ $json.createdBy }}",
+            "createdByName": "={{ $json.createdByName }}",
+            "createdAt": "={{ $json.createdAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "id", "displayName": "id", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "date", "displayName": "date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "amount", "displayName": "amount", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "currency", "displayName": "currency", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "description", "displayName": "description", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "createdBy", "displayName": "createdBy", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "createdByName", "displayName": "createdByName", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "createdAt", "displayName": "createdAt", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "append-cash-barin",
+      "name": "Append Cash",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [672, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cash = $('Prepare Cash').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    data: cash\n  }\n}];"
+      },
+      "id": "format-resp-cash-barin",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-cash-create-barin",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1104, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Create": {
+      "main": [[{ "node": "Read For ID", "type": "main", "index": 0 }]]
+    },
+    "Read For ID": {
+      "main": [[{ "node": "Prepare Cash", "type": "main", "index": 0 }]]
+    },
+    "Prepare Cash": {
+      "main": [[{ "node": "Append Cash", "type": "main", "index": 0 }]]
+    },
+    "Append Cash": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [{ "name": "BARIN-ALP" }, { "name": "Cash" }]
+}

@@ -90,6 +90,11 @@ export const getEndpoints = () => ({
   UPDATE_BANK_TRANSACTION: `/${currentApiPrefix}/bank-transactions/update`,
   DELETE_BANK_TRANSACTION: `/${currentApiPrefix}/bank-transactions/delete`,
   
+  // Cash Withdrawals - Кеш тегления от банкомат
+  GET_CASH_WITHDRAWALS: `/${currentApiPrefix}/cash-withdrawals`,
+  CREATE_CASH_WITHDRAWAL: `/${currentApiPrefix}/cash-withdrawals/create`,
+  DELETE_CASH_WITHDRAWAL: `/${currentApiPrefix}/cash-withdrawals/delete`,
+  
   // Incomes - Приходи
   GET_INCOMES: `/${currentApiPrefix}/incomes`,
   CREATE_INCOME: `/${currentApiPrefix}/incomes/create`,

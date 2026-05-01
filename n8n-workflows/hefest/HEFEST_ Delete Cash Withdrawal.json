@@ -1,0 +1,131 @@
+{
+  "name": "HEFEST: Delete Cash Withdrawal",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hefest/cash-withdrawals/delete",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "wh-delete-cash-hefest",
+      "name": "Webhook Delete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "hefest-cash-delete"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "CashWithdrawals",
+          "mode": "list",
+          "cachedResultName": "CashWithdrawals"
+        },
+        "options": {}
+      },
+      "id": "read-cash-del-hefest",
+      "name": "Read Cash",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [224, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst body = $('Webhook Delete').first().json.body;\nconst targetId = Number(body.id);\n\nlet rowNumber = null;\nfor (let i = 0; i < rows.length; i++) {\n  if (Number(rows[i].json.id) === targetId) {\n    rowNumber = i + 2;\n    break;\n  }\n}\n\nif (!rowNumber) {\n  throw new Error(`Cash withdrawal with id ${targetId} not found`);\n}\n\nreturn [{\n  json: {\n    rowToDelete: rowNumber,\n    id: targetId\n  }\n}];"
+      },
+      "id": "find-row-cash-hefest",
+      "name": "Find Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 0]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1hv4XAfHhScA40Bm1kQ3I-Ih4SJuCBpOJxTOYDNb167g",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "CashWithdrawals",
+          "mode": "list",
+          "cachedResultName": "CashWithdrawals"
+        },
+        "startIndex": "={{ $json.rowToDelete }}"
+      },
+      "id": "delete-cash-hefest",
+      "name": "Delete Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [672, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "g66RiDpuB99otBdC",
+          "name": "GP Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true,\n    message: 'Cash withdrawal deleted successfully'\n  }\n}];"
+      },
+      "id": "format-del-cash-hefest",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-del-cash-hefest",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1104, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Delete": {
+      "main": [[{ "node": "Read Cash", "type": "main", "index": 0 }]]
+    },
+    "Read Cash": {
+      "main": [[{ "node": "Find Row", "type": "main", "index": 0 }]]
+    },
+    "Find Row": {
+      "main": [[{ "node": "Delete Row", "type": "main", "index": 0 }]]
+    },
+    "Delete Row": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [{ "name": "HEFEST" }, { "name": "Cash" }]
+}

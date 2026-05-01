@@ -104,6 +104,25 @@
 - `objectId` се попълва когато транзакцията се зачисли към обект
 - `status`: `unmatched` (нова), `matched` (зачислена към обект), `processed` (обработена)
 
+### 7. CashWithdrawals Sheet (Колони A-H) - КЕШ ТЕГЛЕНИЯ
+| Колона | Header | Type | Example |
+|--------|--------|------|---------|
+| A | id | Number | 1 |
+| B | date | Date | 2026-05-15 |
+| C | amount | Number | 500.00 |
+| D | currency | Text | EUR |
+| E | description | Text | Теглене от банкомат |
+| F | createdBy | Number | 1 (user ID) |
+| G | createdByName | Text | Георги Директор |
+| H | createdAt | DateTime | 2026-05-15T10:30:00.000Z |
+
+**⚠️ ВАЖНО за CashWithdrawals:**
+- Записва ръчно изтеглени суми кеш от банкомата (не се чете автоматично от банкови извлечения)
+- Кеш балансът се изчислява в Bank секцията: `SUM(withdrawals) - SUM(transactions where method='cash' AND type='expense')`
+- Проследяването започва от **2026-05-01** (по-стари записи се игнорират в UI)
+- Месечен breakdown показва разлика между изтеглено и записано похарчено за всеки календарен месец
+- Sheet name **трябва** да е точно `CashWithdrawals` (използва се в n8n workflows)
+
 ---
 
 ## ⚠️ Важни бележки
