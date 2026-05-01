@@ -71,10 +71,15 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
     try {
       const response = await apiService.getInvoices();
       if (response.success && response.data) {
+        // Technicians see only their own invoice history; directors see all
+        const scoped = isDirector
+          ? response.data
+          : response.data.filter(inv => Number(inv.createdBy) === Number(user?.id));
+
         // Unique suppliers (sorted alphabetically)
         const suppliers = Array.from(
           new Set(
-            response.data
+            scoped
               .map(inv => (inv.supplier || '').trim())
               .filter(s => s.length > 0)
           )
@@ -83,7 +88,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
 
         // Unique item names + remember most recent unit/unitPrice per name
         // Iterate from most recent invoice to oldest so first seen wins
-        const sorted = [...response.data].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const sorted = [...scoped].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         const namesSet = new Set<string>();
         const defaults: Record<string, { unit: string; unitPrice: number }> = {};
         for (const inv of sorted) {

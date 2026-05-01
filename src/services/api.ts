@@ -183,17 +183,34 @@ export const apiService = {
       
       console.log('Get Objects response from n8n:', response.data);
       
-      // n8n returns { data: [...] } format
+      // Extract array from response (n8n returns { data: [...] } or array)
+      let objects: ConstructionObject[] = [];
       if (response.data?.data && Array.isArray(response.data.data)) {
-        return { success: true, data: response.data.data };
+        objects = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        objects = response.data;
       }
-      
-      // Handle array response
-      if (Array.isArray(response.data)) {
-        return { success: true, data: response.data };
+
+      // Client-side filter: technicians see only objects where they are assigned
+      if (role === 'technician' && userId) {
+        objects = objects.filter(obj => {
+          const assigned = obj.assignedTechnicians;
+          if (!assigned) return false;
+          // assignedTechnicians can come as array or comma-separated string
+          if (Array.isArray(assigned)) {
+            return assigned.map(Number).includes(Number(userId));
+          }
+          if (typeof assigned === 'string') {
+            return (assigned as string)
+              .split(',')
+              .map((s: string) => Number(s.trim()))
+              .includes(Number(userId));
+          }
+          return false;
+        });
       }
-      
-      return { success: true, data: [] };
+
+      return { success: true, data: objects };
     } catch (error) {
       console.error('Get Objects error:', error);
       return { success: false, error: 'Грешка при зареждане на обекти' };
