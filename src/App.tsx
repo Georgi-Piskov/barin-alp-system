@@ -7,6 +7,7 @@ import { IncomesPage } from './pages/Incomes';
 import { InventoryPage } from './pages/Inventory';
 import { TransactionsPage } from './pages/Transactions';
 import { BankStatementsPage } from './pages/BankStatements';
+import { MaterialsCalculatorPage } from './pages/MaterialsCalculator';
 import { MainLayout } from './components/Layout';
 import { ProtectedRoute } from './components/Auth';
 
@@ -33,6 +34,7 @@ function App() {
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/bank-statements" element={<BankStatementsPage />} />
+          <Route path="/materials-calculator" element={<MaterialsCalculatorPage />} />
         </Route>
 
         {/* Redirects */}

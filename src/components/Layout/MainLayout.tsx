@@ -13,6 +13,7 @@ import {
   Landmark,
   TrendingUp,
   RefreshCw,
+  Calculator,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { to: '/incomes', icon: TrendingUp, label: 'Приходи' },
   { to: '/inventory', icon: Package, label: 'Инвентар' },
   { to: '/transactions', icon: Receipt, label: 'Транзакции' },
+  { to: '/materials-calculator', icon: Calculator, label: 'Калкулатор' },
   { to: '/bank-statements', icon: Landmark, label: 'Банка', directorOnly: true },
 ];
 
