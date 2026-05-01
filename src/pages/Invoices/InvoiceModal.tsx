@@ -37,7 +37,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
   });
   
   const [items, setItems] = useState<InvoiceItem[]>([
-    { name: '', unit: 'бр', quantity: 1, unitPrice: 0, totalPrice: 0 }
+    { name: '', unit: 'бр', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }
   ]);
   
   const [objects, setObjects] = useState<ConstructionObject[]>([]);
@@ -140,7 +140,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
 
   // Add new item
   const addItem = () => {
-    setItems([...items, { name: '', unit: 'бр', quantity: 1, unitPrice: 0, totalPrice: 0 }]);
+    setItems([...items, { name: '', unit: 'бр', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }]);
   };
 
   // Remove item
@@ -164,13 +164,19 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
           // Only override if user hasn't typed a custom unit price yet (price is 0)
           if (!item.unitPrice) item.unitPrice = def.unitPrice;
           if (!item.unit || item.unit === 'бр') item.unit = def.unit;
-          item.totalPrice = item.quantity * item.unitPrice;
         }
       }
-    } else if (field === 'quantity' || field === 'unitPrice') {
-      item[field] = Number(value) || 0;
-      item.totalPrice = item.quantity * item.unitPrice;
+    } else if (field === 'quantity' || field === 'unitPrice' || field === 'discount') {
+      let n = Number(value) || 0;
+      if (field === 'discount') {
+        if (n < 0) n = 0;
+        if (n > 100) n = 100;
+      }
+      (item as any)[field] = n;
     }
+    // Recalculate total: quantity * unitPrice * (1 - discount/100)
+    const discountFactor = 1 - ((item.discount || 0) / 100);
+    item.totalPrice = item.quantity * item.unitPrice * discountFactor;
     
     newItems[index] = item;
     setItems(newItems);
@@ -325,10 +331,11 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
             <div className="space-y-2 bg-gray-50 p-3 rounded-xl">
               {/* Header */}
               <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
-                <div className="col-span-4">Наименование</div>
+                <div className="col-span-3">Наименование</div>
                 <div className="col-span-2">Мярка</div>
-                <div className="col-span-2">К-во</div>
-                <div className="col-span-2">Ед. цена без ДДС</div>
+                <div className="col-span-1">К-во</div>
+                <div className="col-span-2">Ед. цена</div>
+                <div className="col-span-2">Отстъпка %</div>
                 <div className="col-span-1 text-right">Сума</div>
                 <div className="col-span-1"></div>
               </div>
@@ -340,7 +347,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                     type="text"
                     value={item.name}
                     onChange={(e) => updateItem(index, 'name', e.target.value)}
-                    className="col-span-4 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                    className="col-span-3 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
                     placeholder="Лепило за плочки"
                     list="item-suggestions"
                     autoComplete="off"
@@ -360,7 +367,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                     step="0.01"
                     value={item.quantity || ''}
                     onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                    className="col-span-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                    className="col-span-1 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
                     placeholder="0"
                   />
                   <input
@@ -372,6 +379,19 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                     className="col-span-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
                     placeholder="0.00"
                   />
+                  <div className="col-span-2 relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={item.discount || ''}
+                      onChange={(e) => updateItem(index, 'discount', e.target.value)}
+                      className="w-full pl-3 pr-7 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                      placeholder="0"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                  </div>
                   <div className="col-span-1 text-sm font-medium text-gray-700 text-right">
                     {item.totalPrice.toFixed(2)}
                   </div>

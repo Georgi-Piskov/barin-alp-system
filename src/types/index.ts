@@ -29,7 +29,8 @@ export interface InvoiceItem {
   unit: string;        // Мярка (бр, кг, м, м2, м3, л, торба, пакет)
   quantity: number;    // Количество
   unitPrice: number;   // Единична цена
-  totalPrice: number;  // Обща цена (quantity * unitPrice)
+  discount?: number;   // Отстъпка в % (0-100), по подразбиране 0
+  totalPrice: number;  // Обща цена след отстъпка (quantity * unitPrice * (1 - discount/100))
 }
 
 // Invoice types

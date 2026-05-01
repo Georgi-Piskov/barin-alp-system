@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { InvoiceModal } from './InvoiceModal';
 // Helper to extract items from invoice (handles data in wrong columns)
-const getInvoiceItems = (invoice: Invoice): { name: string; unit: string; quantity: number; unitPrice: number; totalPrice: number }[] => {
+const getInvoiceItems = (invoice: Invoice): { name: string; unit: string; quantity: number; unitPrice: number; discount?: number; totalPrice: number }[] => {
   // First check if items array is populated
   if (invoice.items && Array.isArray(invoice.items) && invoice.items.length > 0) {
     return invoice.items;
@@ -452,6 +452,7 @@ export const InvoicesPage = () => {
                                     <th className="pb-1">Мярка</th>
                                     <th className="pb-1 text-right">К-во</th>
                                     <th className="pb-1 text-right">Ед. цена</th>
+                                    <th className="pb-1 text-right">Отст. %</th>
                                     <th className="pb-1 text-right">Сума</th>
                                   </tr>
                                 </thead>
@@ -462,6 +463,7 @@ export const InvoicesPage = () => {
                                       <td className="py-1 text-gray-600">{item.unit}</td>
                                       <td className="py-1 text-right text-gray-900">{item.quantity}</td>
                                       <td className="py-1 text-right text-gray-600">{Number(item.unitPrice).toFixed(2)} €</td>
+                                      <td className="py-1 text-right text-gray-600">{item.discount ? `${Number(item.discount).toFixed(2)}%` : '–'}</td>
                                       <td className="py-1 text-right font-medium text-gray-900">{Number(item.totalPrice).toFixed(2)} €</td>
                                     </tr>
                                   ))}
