@@ -39,6 +39,9 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
   const [items, setItems] = useState<InvoiceItem[]>([
     { name: '', unit: 'бр', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }
   ]);
+  // Когато е true: въведените единични цени се третират като С ДДС
+  // и се конвертират към без-ДДС преди съхранение
+  const [pricesIncludeVat, setPricesIncludeVat] = useState(false);
   
   const [objects, setObjects] = useState<ConstructionObject[]>([]);
   const [isLoadingObjects, setIsLoadingObjects] = useState(true);
@@ -132,7 +135,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
   };
 
-  // Calculate VAT (20%)
+  // VAT rate (20%)
   const VAT_RATE = 0.20;
   const totalWithoutVat = calculateTotal();
   const vatAmount = totalWithoutVat * VAT_RATE;
@@ -171,6 +174,10 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
       if (field === 'discount') {
         if (n < 0) n = 0;
         if (n > 100) n = 100;
+      }
+      // Ако е включен режим "цени с ДДС" — конвертирай въведената ед. цена към без-ДДС
+      if (field === 'unitPrice' && pricesIncludeVat) {
+        n = n / (1 + VAT_RATE);
       }
       (item as any)[field] = n;
     }
@@ -314,18 +321,29 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
 
           {/* Items Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="block text-sm font-medium text-gray-700">
                 Артикули *
               </label>
-              <button
-                type="button"
-                onClick={addItem}
-                className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
-              >
-                <Plus className="w-4 h-4" />
-                Добави артикул
-              </button>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={pricesIncludeVat}
+                    onChange={(e) => setPricesIncludeVat(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span>Цените са с ДДС</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  Добави артикул
+                </button>
+              </div>
             </div>
             
             <div className="space-y-2 bg-gray-50 p-3 rounded-xl">
@@ -334,9 +352,9 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                 <div className="col-span-3">Наименование</div>
                 <div className="col-span-2">Мярка</div>
                 <div className="col-span-1">К-во</div>
-                <div className="col-span-2">Ед. цена</div>
+                <div className="col-span-2">Ед. цена{pricesIncludeVat ? ' с ДДС' : ''}</div>
                 <div className="col-span-2">Отстъпка %</div>
-                <div className="col-span-1 text-right">Сума</div>
+                <div className="col-span-1 text-right">Сума{pricesIncludeVat ? ' с ДДС' : ''}</div>
                 <div className="col-span-1"></div>
               </div>
               
@@ -374,7 +392,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                     type="number"
                     min="0"
                     step="0.01"
-                    value={item.unitPrice || ''}
+                    value={item.unitPrice ? Number((pricesIncludeVat ? item.unitPrice * (1 + VAT_RATE) : item.unitPrice).toFixed(4)) : ''}
                     onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
                     className="col-span-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
                     placeholder="0.00"
@@ -393,7 +411,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                   </div>
                   <div className="col-span-1 text-sm font-medium text-gray-700 text-right">
-                    {item.totalPrice.toFixed(2)}
+                    {(pricesIncludeVat ? item.totalPrice * (1 + VAT_RATE) : item.totalPrice).toFixed(2)}
                   </div>
                   <button
                     type="button"
