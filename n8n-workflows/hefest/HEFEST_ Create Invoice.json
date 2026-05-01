@@ -93,7 +93,7 @@
             "objectId": "={{ $json.objectId }}",
             "createdByName": "={{ $json.createdByName }}",
             "objectName": "={{ $json.objectName }}",
-            "items": "{{ $json.items }}"
+            "items": "={{ $json.items }}"
           },
           "matchingColumns": [
             "id"
