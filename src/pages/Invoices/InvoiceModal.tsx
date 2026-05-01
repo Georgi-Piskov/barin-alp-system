@@ -44,6 +44,12 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
   const [isLoadingObjects, setIsLoadingObjects] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Autocomplete suggestions from history
+  const [supplierSuggestions, setSupplierSuggestions] = useState<string[]>([]);
+  const [itemSuggestions, setItemSuggestions] = useState<string[]>([]);
+  // Map: item name (lowercased) -> { unit, unitPrice } from most recent invoice
+  const [itemDefaults, setItemDefaults] = useState<Record<string, { unit: string; unitPrice: number }>>({});
+
   useEffect(() => {
     if (invoice) {
       setFormData({
@@ -58,7 +64,50 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
       }
     }
     loadObjects();
+    loadHistory();
   }, [invoice]);
+
+  const loadHistory = async () => {
+    try {
+      const response = await apiService.getInvoices();
+      if (response.success && response.data) {
+        // Unique suppliers (sorted alphabetically)
+        const suppliers = Array.from(
+          new Set(
+            response.data
+              .map(inv => (inv.supplier || '').trim())
+              .filter(s => s.length > 0)
+          )
+        ).sort((a, b) => a.localeCompare(b, 'bg'));
+        setSupplierSuggestions(suppliers);
+
+        // Unique item names + remember most recent unit/unitPrice per name
+        // Iterate from most recent invoice to oldest so first seen wins
+        const sorted = [...response.data].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const namesSet = new Set<string>();
+        const defaults: Record<string, { unit: string; unitPrice: number }> = {};
+        for (const inv of sorted) {
+          if (!Array.isArray(inv.items)) continue;
+          for (const it of inv.items) {
+            const name = (it.name || '').trim();
+            if (!name) continue;
+            namesSet.add(name);
+            const key = name.toLowerCase();
+            if (!defaults[key]) {
+              defaults[key] = {
+                unit: it.unit || 'бр',
+                unitPrice: Number(it.unitPrice) || 0,
+              };
+            }
+          }
+        }
+        setItemSuggestions(Array.from(namesSet).sort((a, b) => a.localeCompare(b, 'bg')));
+        setItemDefaults(defaults);
+      }
+    } catch (err) {
+      console.error('Error loading invoice history:', err);
+    }
+  };
 
   const loadObjects = async () => {
     setIsLoadingObjects(true);
@@ -103,6 +152,16 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
     
     if (field === 'name' || field === 'unit') {
       item[field] = value as string;
+      // Auto-fill unit + unitPrice when a known item name is selected
+      if (field === 'name') {
+        const def = itemDefaults[(value as string).trim().toLowerCase()];
+        if (def) {
+          // Only override if user hasn't typed a custom unit price yet (price is 0)
+          if (!item.unitPrice) item.unitPrice = def.unitPrice;
+          if (!item.unit || item.unit === 'бр') item.unit = def.unit;
+          item.totalPrice = item.quantity * item.unitPrice;
+        }
+      }
     } else if (field === 'quantity' || field === 'unitPrice') {
       item[field] = Number(value) || 0;
       item.totalPrice = item.quantity * item.unitPrice;
@@ -226,8 +285,20 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
               onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               placeholder="напр. Строй Материали ООД"
+              list="supplier-suggestions"
+              autoComplete="off"
               required
             />
+            <datalist id="supplier-suggestions">
+              {supplierSuggestions.map(s => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            {supplierSuggestions.length > 0 && (
+              <p className="mt-1 text-xs text-gray-400">
+                💡 {supplierSuggestions.length} запаметени доставчици — започни да пишеш за предложения
+              </p>
+            )}
           </div>
 
           {/* Items Section */}
@@ -266,6 +337,8 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                     onChange={(e) => updateItem(index, 'name', e.target.value)}
                     className="col-span-4 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
                     placeholder="Лепило за плочки"
+                    list="item-suggestions"
+                    autoComplete="off"
                   />
                   <select
                     value={item.unit}
@@ -308,6 +381,16 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                 </div>
               ))}
             </div>
+            <datalist id="item-suggestions">
+              {itemSuggestions.map(name => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            {itemSuggestions.length > 0 && (
+              <p className="text-xs text-gray-400">
+                💡 {itemSuggestions.length} запаметени артикула — при избор автоматично се попълват мярка и последна цена
+              </p>
+            )}
             
             {/* Total */}
             <div className="pt-3 border-t border-gray-200 space-y-2">
