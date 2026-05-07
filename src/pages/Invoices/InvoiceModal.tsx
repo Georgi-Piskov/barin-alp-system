@@ -37,7 +37,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
   });
   
   const [items, setItems] = useState<InvoiceItem[]>([
-    { name: '', unit: 'бр', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }
+    { name: '', unit: 'бр', quantity: 0, unitPrice: 0, discount: 0, totalPrice: 0 }
   ]);
   // Когато е true: въведените единични цени се третират като С ДДС
   // и се конвертират към без-ДДС преди съхранение
@@ -143,7 +143,7 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
 
   // Add new item
   const addItem = () => {
-    setItems([...items, { name: '', unit: 'бр', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 }]);
+    setItems([...items, { name: '', unit: 'бр', quantity: 0, unitPrice: 0, discount: 0, totalPrice: 0 }]);
   };
 
   // Remove item
@@ -346,9 +346,9 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
               </div>
             </div>
             
-            <div className="space-y-2 bg-gray-50 p-3 rounded-xl">
-              {/* Header */}
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
+            <div className="space-y-3 bg-gray-50 p-3 rounded-xl">
+              {/* Desktop header (≥ sm) */}
+              <div className="hidden sm:grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
                 <div className="col-span-3">Наименование</div>
                 <div className="col-span-2">Мярка</div>
                 <div className="col-span-1">К-во</div>
@@ -357,66 +357,120 @@ export const InvoiceModal = ({ invoice, preselectedObjectId, onSave, onClose }: 
                 <div className="col-span-1 text-right">Сума{pricesIncludeVat ? ' с ДДС' : ''}</div>
                 <div className="col-span-1"></div>
               </div>
-              
+
               {/* Items */}
               {items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => updateItem(index, 'name', e.target.value)}
-                    className="col-span-3 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
-                    placeholder="Лепило за плочки"
-                    list="item-suggestions"
-                    autoComplete="off"
-                  />
-                  <select
-                    value={item.unit}
-                    onChange={(e) => updateItem(index, 'unit', e.target.value)}
-                    className="col-span-2 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
-                  >
-                    {UNITS.map(u => (
-                      <option key={u.value} value={u.value}>{u.value}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.quantity || ''}
-                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                    className="col-span-1 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
-                    placeholder="0"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.unitPrice ? Number((pricesIncludeVat ? item.unitPrice * (1 + VAT_RATE) : item.unitPrice).toFixed(4)) : ''}
-                    onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
-                    className="col-span-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
-                    placeholder="0.00"
-                  />
-                  <div className="col-span-2 relative">
+                <div
+                  key={index}
+                  className="sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center bg-white sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none border border-gray-200 sm:border-0 space-y-2 sm:space-y-0"
+                >
+                  {/* Mobile row 1: name + delete */}
+                  <div className="flex items-center justify-between sm:hidden mb-1">
+                    <span className="text-xs font-medium text-gray-500">Артикул #{index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      disabled={items.length === 1}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Name */}
+                  <div className="sm:col-span-3">
+                    <label className="block text-xs text-gray-500 mb-1 sm:hidden">Наименование</label>
                     <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={item.discount || ''}
-                      onChange={(e) => updateItem(index, 'discount', e.target.value)}
-                      className="w-full pl-3 pr-7 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
-                      placeholder="0"
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => updateItem(index, 'name', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                      placeholder="Лепило за плочки"
+                      list="item-suggestions"
+                      autoComplete="off"
                     />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                   </div>
-                  <div className="col-span-1 text-sm font-medium text-gray-700 text-right">
-                    {(pricesIncludeVat ? item.totalPrice * (1 + VAT_RATE) : item.totalPrice).toFixed(2)}
+
+                  {/* Mobile: 2-column grid for unit + qty */}
+                  <div className="grid grid-cols-2 gap-2 sm:contents">
+                    {/* Unit */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1 sm:hidden">Мярка</label>
+                      <select
+                        value={item.unit}
+                        onChange={(e) => updateItem(index, 'unit', e.target.value)}
+                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                      >
+                        {UNITS.map(u => (
+                          <option key={u.value} value={u.value}>{u.value}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="sm:col-span-1">
+                      <label className="block text-xs text-gray-500 mb-1 sm:hidden">К-во</label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        value={item.quantity || ''}
+                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
+
+                  {/* Mobile: 2-column grid for price + discount */}
+                  <div className="grid grid-cols-2 gap-2 sm:contents">
+                    {/* Unit price */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1 sm:hidden">Ед. цена{pricesIncludeVat ? ' с ДДС' : ''}</label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        value={item.unitPrice ? Number((pricesIncludeVat ? item.unitPrice * (1 + VAT_RATE) : item.unitPrice).toFixed(4)) : ''}
+                        onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    {/* Discount */}
+                    <div className="sm:col-span-2 relative">
+                      <label className="block text-xs text-gray-500 mb-1 sm:hidden">Отстъпка %</label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={item.discount || ''}
+                        onChange={(e) => updateItem(index, 'discount', e.target.value)}
+                        className="w-full pl-3 pr-7 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 bg-white"
+                        placeholder="0"
+                      />
+                      <span className="absolute right-2 top-[calc(50%+10px)] sm:top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                    </div>
+                  </div>
+
+                  {/* Sum (mobile = full row, desktop = col-span-1) */}
+                  <div className="sm:col-span-1 flex justify-between sm:justify-end items-center pt-2 sm:pt-0 border-t sm:border-0 border-gray-100">
+                    <span className="text-xs text-gray-500 sm:hidden">Сума{pricesIncludeVat ? ' с ДДС' : ''}:</span>
+                    <span className="text-sm font-semibold text-gray-900 sm:text-right">
+                      {(pricesIncludeVat ? item.totalPrice * (1 + VAT_RATE) : item.totalPrice).toFixed(2)} €
+                    </span>
+                  </div>
+
+                  {/* Desktop delete button */}
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
-                    className="col-span-1 p-2 text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30"
+                    className="hidden sm:flex sm:col-span-1 p-2 text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30 items-center justify-center"
                     disabled={items.length === 1}
                   >
                     <Trash2 className="w-4 h-4" />
