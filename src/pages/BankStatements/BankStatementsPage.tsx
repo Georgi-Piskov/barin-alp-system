@@ -459,7 +459,7 @@ export const BankStatementsPage = () => {
   const filteredTransactions = transactions.filter(tx => {
     if (filterType === 'debit' && tx.type !== 'debit') return false;
     if (filterType === 'credit' && tx.type !== 'credit') return false;
-    if (filterUnassigned && tx.objectId) return false;
+    if (filterUnassigned && (tx.objectId || tx.technicianId || tx.category === 'cash_withdrawal')) return false;
     return true;
   });
 
@@ -990,8 +990,8 @@ export const BankStatementsPage = () => {
                             </button>
                           )}
                           
-                          {/* Create Expense (for debit transactions) */}
-                          {tx.type === 'debit' && (
+                          {/* Create Expense (for debit transactions) — hidden for cash-marked to avoid duplication */}
+                          {tx.type === 'debit' && tx.category !== 'cash_withdrawal' && (
                             <button
                               onClick={() => handleCreateExpenseFromTx(tx)}
                               className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1"
@@ -1074,7 +1074,7 @@ export const BankStatementsPage = () => {
                   <div>
                     <span className="text-blue-700">Разпределени:</span>
                     <span className="ml-2 font-medium text-blue-900">
-                      {transactions.filter(tx => tx.objectId || tx.technicianId).length} от {transactions.length}
+                      {transactions.filter(tx => tx.objectId || tx.technicianId || tx.category === 'cash_withdrawal').length} от {transactions.length}
                     </span>
                   </div>
                   <div>
