@@ -61,13 +61,6 @@ export const BankStatementsPage = () => {
   // Cash withdrawal tracking
   const [cashWithdrawals, setCashWithdrawals] = useState<CashWithdrawal[]>([]);
   const [manualTransactions, setManualTransactions] = useState<Transaction[]>([]);
-  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
-  const [cashForm, setCashForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    amount: '',
-    description: '',
-  });
-  const [isSavingCash, setIsSavingCash] = useState(false);
 
   const isDirector = user?.role === 'director';
 
@@ -99,49 +92,6 @@ export const BankStatementsPage = () => {
     };
     loadData();
   }, []);
-
-  // Save new cash withdrawal
-  const handleSaveCashWithdrawal = async () => {
-    const amount = parseFloat(cashForm.amount);
-    if (!cashForm.date || !amount || amount <= 0) {
-      setError('Моля, въведете валидна дата и сума');
-      setTimeout(() => setError(null), 5000);
-      return;
-    }
-
-    setIsSavingCash(true);
-    try {
-      const response = await apiService.createCashWithdrawal({
-        date: cashForm.date,
-        amount,
-        currency: 'EUR',
-        description: cashForm.description || '',
-        createdBy: user?.id || 0,
-        createdByName: user?.name || '',
-      });
-
-      if (response.success && response.data) {
-        setCashWithdrawals(prev => [...prev, response.data!]);
-        setIsCashModalOpen(false);
-        setCashForm({
-          date: new Date().toISOString().split('T')[0],
-          amount: '',
-          description: '',
-        });
-        setSuccessMessage('Кеш тегленето е записано');
-        setTimeout(() => setSuccessMessage(null), 3000);
-      } else {
-        setError(response.error || 'Грешка при запазване');
-        setTimeout(() => setError(null), 5000);
-      }
-    } catch (err) {
-      console.error('Error saving cash withdrawal:', err);
-      setError('Грешка при запазване');
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setIsSavingCash(false);
-    }
-  };
 
   // Delete cash withdrawal
   const handleDeleteCashWithdrawal = async (cw: CashWithdrawal) => {
@@ -347,6 +297,32 @@ export const BankStatementsPage = () => {
     }
   };
 
+  // Toggle "кеш" mark on a bank transaction (persisted as category = cash_withdrawal)
+  const handleToggleCash = async (tx: BankTransaction) => {
+    if (!tx.id) return;
+    const newCategory = tx.category === 'cash_withdrawal' ? 'other' : 'cash_withdrawal';
+    try {
+      const response = await apiService.updateBankTransaction(tx.id, {
+        category: newCategory,
+        objectId: tx.objectId ?? null,
+        objectName: tx.objectName || '',
+        status: tx.status || (tx.objectId ? 'matched' : 'unmatched'),
+      });
+      if (response.success) {
+        setTransactions(prev => prev.map(t => (t.id === tx.id ? { ...t, category: newCategory as BankTransaction['category'] } : t)));
+        setSuccessMessage(newCategory === 'cash_withdrawal' ? 'Транзакцията е маркирана като изтеглен КЕШ' : 'Маркировката КЕШ е премахната');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(response.error || 'Грешка при запазване');
+        setTimeout(() => setError(null), 5000);
+      }
+    } catch (err) {
+      console.error('Error toggling cash mark:', err);
+      setError('Грешка при запазване');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
   // Create income from bank transaction (credit)
   const handleCreateIncomeFromTx = (tx: BankTransaction) => {
     setIncomeFromBankTx({
@@ -487,8 +463,8 @@ export const BankStatementsPage = () => {
     return true;
   });
 
-  // Count unassigned
-  const unassignedCount = transactions.filter(tx => !tx.objectId && !tx.technicianId).length;
+  // Count unassigned (cash-marked transactions don't need an object)
+  const unassignedCount = transactions.filter(tx => !tx.objectId && !tx.technicianId && tx.category !== 'cash_withdrawal').length;
 
   if (!isDirector) {
     return (
@@ -521,40 +497,36 @@ export const BankStatementsPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Банкови извлечения</h1>
           <p className="text-gray-500">Качете CSV от Asset Bank и разпределете транзакциите</p>
         </div>
-        <button
-          onClick={() => setIsCashModalOpen(true)}
-          className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2 shadow-sm"
-        >
-          <Banknote className="w-5 h-5" />
-          Запиши изтеглен КЕШ
-        </button>
       </div>
 
       {/* Cash Balance Section */}
       {(() => {
-        const trackedWithdrawals = cashWithdrawals.filter(w => w.date >= CASH_TRACKING_START);
-        const trackedCashExpenses = manualTransactions.filter(
-          t => t.method === 'cash' && t.type === 'expense' && t.date >= CASH_TRACKING_START
+        // Withdrawn: bank transactions marked as "кеш" + legacy manual entries
+        const markedCashTxs = transactions.filter(
+          tx => tx.type === 'debit' && tx.category === 'cash_withdrawal' && tx.date >= CASH_TRACKING_START
         );
-        const totalWithdrawn = trackedWithdrawals.reduce((s, w) => s + (Number(w.amount) || 0), 0);
-        const totalSpent = trackedCashExpenses.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+        const trackedWithdrawals = cashWithdrawals.filter(w => w.date >= CASH_TRACKING_START);
+        // Spent: everything paid in cash — expenses AND заприходявания
+        const trackedCashPayments = manualTransactions.filter(
+          t => t.method === 'cash' && t.date >= CASH_TRACKING_START
+        );
+        const totalWithdrawn =
+          markedCashTxs.reduce((s, tx) => s + (Number(tx.amount) || 0), 0) +
+          trackedWithdrawals.reduce((s, w) => s + (Number(w.amount) || 0), 0);
+        const totalSpent = trackedCashPayments.reduce((s, t) => s + (Number(t.amount) || 0), 0);
         const balance = totalWithdrawn - totalSpent;
 
         // Group by month (YYYY-MM)
         const monthsMap: Record<string, { withdrawn: number; spent: number }> = {};
         const monthKey = (d: string) => (d || '').slice(0, 7);
-        for (const w of trackedWithdrawals) {
-          const k = monthKey(w.date);
-          if (!k) continue;
+        const addToMonth = (k: string, field: 'withdrawn' | 'spent', amount: number) => {
+          if (!k) return;
           if (!monthsMap[k]) monthsMap[k] = { withdrawn: 0, spent: 0 };
-          monthsMap[k].withdrawn += Number(w.amount) || 0;
-        }
-        for (const t of trackedCashExpenses) {
-          const k = monthKey(t.date);
-          if (!k) continue;
-          if (!monthsMap[k]) monthsMap[k] = { withdrawn: 0, spent: 0 };
-          monthsMap[k].spent += Number(t.amount) || 0;
-        }
+          monthsMap[k][field] += amount;
+        };
+        for (const tx of markedCashTxs) addToMonth(monthKey(tx.date), 'withdrawn', Number(tx.amount) || 0);
+        for (const w of trackedWithdrawals) addToMonth(monthKey(w.date), 'withdrawn', Number(w.amount) || 0);
+        for (const t of trackedCashPayments) addToMonth(monthKey(t.date), 'spent', Number(t.amount) || 0);
         const months = Object.keys(monthsMap).sort().reverse();
         const monthLabel = (k: string) => {
           const [y, m] = k.split('-');
@@ -570,7 +542,7 @@ export const BankStatementsPage = () => {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Кеш баланс</h2>
-                <p className="text-xs text-gray-500">От {CASH_TRACKING_START} до днес</p>
+                <p className="text-xs text-gray-500">От {CASH_TRACKING_START} до днес — маркирайте банкови транзакции с бутона „Кеш" по-долу</p>
               </div>
             </div>
 
@@ -582,7 +554,7 @@ export const BankStatementsPage = () => {
                 </p>
               </div>
               <div className="bg-white rounded-lg p-3 border border-amber-100">
-                <p className="text-xs text-gray-500 mb-1">Разходвани (кеш)</p>
+                <p className="text-xs text-gray-500 mb-1">Разплатени в кеш (разходи + заприходявания)</p>
                 <p className="text-lg font-bold text-red-600">
                   {totalSpent.toLocaleString('bg-BG', { minimumFractionDigits: 2 })} €
                 </p>
@@ -630,7 +602,7 @@ export const BankStatementsPage = () => {
               <div className="mt-4">
                 <details className="bg-white rounded-lg border border-amber-100 p-3">
                   <summary className="text-sm font-medium text-gray-700 cursor-pointer">
-                    История на тегления ({trackedWithdrawals.length})
+                    Ръчно въведени тегления — стара система ({trackedWithdrawals.length})
                   </summary>
                   <div className="mt-3 max-h-60 overflow-y-auto">
                     <table className="w-full text-sm">
@@ -878,7 +850,7 @@ export const BankStatementsPage = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="divide-y divide-gray-100">
               {filteredTransactions.map((tx, index) => (
-                <div key={tx.id || index} className={`p-4 ${!tx.objectId && !tx.technicianId ? 'bg-red-50/30' : ''}`}>
+                <div key={tx.id || index} className={`p-4 ${!tx.objectId && !tx.technicianId && tx.category !== 'cash_withdrawal' ? 'bg-red-50/30' : ''}`}>
                   <div className="flex items-start gap-4">
                     {/* Icon */}
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -990,6 +962,22 @@ export const BankStatementsPage = () => {
                         
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 ml-auto">
+                          {/* Mark as Cash Withdrawal (for debit transactions) */}
+                          {tx.type === 'debit' && (
+                            <button
+                              onClick={() => handleToggleCash(tx)}
+                              className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center gap-1 ${
+                                tx.category === 'cash_withdrawal'
+                                  ? 'bg-amber-500 text-white hover:bg-amber-600'
+                                  : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                              }`}
+                              title={tx.category === 'cash_withdrawal' ? 'Премахни маркировката КЕШ' : 'Маркирай като изтеглен КЕШ'}
+                            >
+                              <Banknote className="w-4 h-4" />
+                              Кеш
+                            </button>
+                          )}
+
                           {/* Create Income (for credit transactions) */}
                           {tx.type === 'credit' && (
                             <button
@@ -1028,6 +1016,12 @@ export const BankStatementsPage = () => {
                       
                       {/* Status indicators */}
                       <div className="mt-2 flex flex-wrap gap-2">
+                        {tx.type === 'debit' && tx.category === 'cash_withdrawal' && (
+                          <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded flex items-center gap-1">
+                            <Banknote className="w-3 h-3" />
+                            Изтеглен кеш
+                          </span>
+                        )}
                         {tx.objectName && (
                           <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded flex items-center gap-1">
                             <Check className="w-3 h-3" />
@@ -1123,75 +1117,6 @@ export const BankStatementsPage = () => {
         prefillData={incomeFromBankTx}
         bankTransactionId={selectedBankTxId}
       />
-
-      {/* Cash Withdrawal Modal */}
-      {isCashModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <Banknote className="w-5 h-5 text-amber-600" />
-                <h3 className="text-lg font-bold text-gray-900">Запиши изтеглен кеш</h3>
-              </div>
-              <button
-                onClick={() => setIsCashModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Дата *</label>
-                <input
-                  type="date"
-                  value={cashForm.date}
-                  onChange={e => setCashForm({ ...cashForm, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Сума (€) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={cashForm.amount}
-                  onChange={e => setCashForm({ ...cashForm, amount: e.target.value })}
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
-                <input
-                  type="text"
-                  value={cashForm.description}
-                  onChange={e => setCashForm({ ...cashForm, description: e.target.value })}
-                  placeholder="Напр. теглене от банкомат"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-              <button
-                onClick={() => setIsCashModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                Отказ
-              </button>
-              <button
-                onClick={handleSaveCashWithdrawal}
-                disabled={isSavingCash}
-                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {isSavingCash ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Запиши
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

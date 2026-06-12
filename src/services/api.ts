@@ -792,7 +792,7 @@ export const apiService = {
     }
   },
 
-  async updateBankTransaction(id: number, data: { objectId?: number | null; objectName?: string; status?: string; displayName?: string; technicianId?: number | null; technicianName?: string | null }): Promise<ApiResponse<BankTransaction>> {
+  async updateBankTransaction(id: number, data: { objectId?: number | null; objectName?: string; status?: string; displayName?: string; technicianId?: number | null; technicianName?: string | null; category?: string }): Promise<ApiResponse<BankTransaction>> {
     if (DEMO_MODE) {
       return { success: true };
     }
